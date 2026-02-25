@@ -24,7 +24,16 @@ function s.initial_effect(c)
 	e2:SetTarget(s.thtg)
 	e2:SetOperation(s.thop)
 	c:RegisterEffect(e2)
-
+	--During your Main Phase, Ritual Summon 1 Emerald Sovereign Ritual Dragon from hand using only setcode 0x4003 monsters
+	local e3=Effect.CreateEffect(c)
+	e3:SetDescription(aux.Stringid(id,2))
+	e3:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_RELEASE)
+	e3:SetType(EFFECT_TYPE_IGNITION)
+	e3:SetRange(LOCATION_FZONE)
+	e3:SetCountLimit(1,{id,2})
+	e3:SetTarget(s.rittg)
+	e3:SetOperation(s.ritop)
+	c:RegisterEffect(e3)
 end
 s.listed_series={0x4003}
 s.listed_names={1000000000}
@@ -97,25 +106,10 @@ function s.rittg(e,tp,eg,ep,ev,re,r,rp,chk)
 		local mg=Duel.GetMatchingGroup(s.tribfilter,tp,LOCATION_MZONE+LOCATION_HAND,0,nil)
 		local tc=Duel.GetFirstMatchingCard(s.ritfilter,tp,LOCATION_HAND,0,nil,e,tp)
 		if not tc then return false end
-		return Duel.GetLocationCount(tp,LOCATION_MZONE)>-1 and s.RitualCheck(mg,tc)
+		return Duel.GetLocationCount(tp,LOCATION_MZONE)>-1 and mg:CheckWithSumGreater(Card.GetLevel,tc:GetLevel())
 	end
 	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_HAND)
 	Duel.SetOperationInfo(0,CATEGORY_RELEASE,nil,0,tp,LOCATION_MZONE+LOCATION_HAND)
-end
-
--- Replicate Ritual.AddProcGreaterCode tribute logic
-function s.RitualCheck(mg,tc)
-	local lv=tc:GetLevel()
-	-- Check for whole tribute monsters
-	for m in aux.Next(mg) do
-		local le=m:IsHasEffect(EFFECT_RITUAL_LEVEL)
-		if le then
-			local val=le:GetValue()(le,tc)
-			if val and (val>>16)==lv then return true end
-		end
-	end
-	-- Standard tribute check
-	return mg:CheckWithSumGreater(Card.GetLevel,lv)
 end
 
 --Operation for Ritual Summon effect
@@ -123,42 +117,16 @@ function s.ritop(e,tp,eg,ep,ev,re,r,rp)
 	if not e:GetHandler():IsRelateToEffect(e) then return end
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
 	local tg=Duel.SelectMatchingCard(tp,s.ritfilter,tp,LOCATION_HAND,0,1,1,nil,e,tp)
-	if #tg==0 then return end
-	local tc=tg:GetFirst()
-	local mg=Duel.GetMatchingGroup(s.tribfilter,tp,LOCATION_MZONE+LOCATION_HAND,0,nil)
-	local lv=tc:GetLevel()
-	-- Gather all possible tribute groups: single whole-tribute monsters and standard combinations
-	local tributeGroups = {}
-	for m in aux.Next(mg) do
-		local le=m:IsHasEffect(EFFECT_RITUAL_LEVEL)
-		if le then
-			local val=le:GetValue()(le,tc)
-			if val and (val>>16)==lv then
-				local g=Group.CreateGroup()
-				g:AddCard(m)
-				table.insert(tributeGroups, g)
-			end
-		end
-	end
-	-- Add standard tribute group
-	local stdGroup=mg:SelectWithSumGreater(tp,Card.GetLevel,lv)
-	if #stdGroup>0 then table.insert(tributeGroups, stdGroup) end
-	if #tributeGroups==0 then return end
-	-- Let the player choose which tribute group to use
-	local chosenGroup
-	if #tributeGroups==1 then
-		chosenGroup=tributeGroups[1]
-	else
-		-- Present options to the player
-		local allCards=Group.CreateGroup()
-		for _,g in ipairs(tributeGroups) do allCards:Merge(g) end
+	if #tg>0 then
+		local tc=tg:GetFirst()
+		local mg=Duel.GetMatchingGroup(s.tribfilter,tp,LOCATION_MZONE+LOCATION_HAND,0,nil)
 		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_RELEASE)
-		chosenGroup=allCards:Select(tp,tributeGroups[1]:GetCount(),tributeGroups[#tributeGroups]:GetCount(),nil)
-	end
-	if chosenGroup and #chosenGroup>0 then
-		tc:SetMaterial(chosenGroup)
-		Duel.ReleaseRitualMaterial(chosenGroup)
-		Duel.SpecialSummon(tc,SUMMON_TYPE_RITUAL,tp,tp,false,true,POS_FACEUP)
-		tc:CompleteProcedure()
+		local mat=mg:SelectWithSumGreater(tp,Card.GetLevel,tc:GetLevel())
+		if #mat>0 then
+			tc:SetMaterial(mat)
+			Duel.ReleaseRitualMaterial(mat)
+			Duel.SpecialSummon(tc,SUMMON_TYPE_RITUAL,tp,tp,false,true,POS_FACEUP)
+			tc:CompleteProcedure()
+		end
 	end
 end
