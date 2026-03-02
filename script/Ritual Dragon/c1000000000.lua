@@ -79,6 +79,16 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if c:IsRelateToEffect(e) then
 		Duel.SpecialSummon(c,1,tp,tp,false,false,POS_FACEUP)
+		-- After revival, add one card with setcode 0x4003 from graveyard to hand
+		local g=Duel.GetMatchingGroup(function(card)
+			return card:IsAbleToHand() and card:IsSetCard(0x4003)
+		end,tp,LOCATION_GRAVE,0,nil)
+		if #g>0 then
+			Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+			local sg=g:Select(tp,1,1,nil)
+			Duel.SendtoHand(sg,nil,REASON_EFFECT)
+			Duel.ConfirmCards(1-tp,sg)
+		end
 	end
 	
 end
