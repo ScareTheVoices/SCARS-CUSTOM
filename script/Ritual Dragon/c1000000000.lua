@@ -81,7 +81,7 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 		Duel.SpecialSummon(c,1,tp,tp,false,false,POS_FACEUP)
 		-- After revival, add one card with setcode 0x4003 from graveyard to hand
 		local g=Duel.GetMatchingGroup(function(card)
-			return card:IsAbleToHand() and card:IsSetCard(0x4003)
+			return card:IsAbleToHand() and card:IsSetCard(0x4003) and card:IsType(TYPE_SPELL+TYPE_TRAP)
 		end,tp,LOCATION_GRAVE,0,nil)
 		if #g>0 then
 			Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
