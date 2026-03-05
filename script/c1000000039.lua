@@ -1,3 +1,5 @@
+--Shine Bright, Emerald Light!
+
 local s,id=GetID()
 function s.initial_effect(c)
 	-- Effect 1: SS from hand/deck if you control no monsters
@@ -37,12 +39,10 @@ function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
 	local b3=Duel.IsExistingMatchingCard(s.lv5lightfilter,tp,LOCATION_MZONE,0,1,nil)
 		and Duel.IsExistingMatchingCard(aux.TRUE,tp,0,LOCATION_ONFIELD,1,nil)
 	if chk==0 then return b1 or b2 or b3 end
-	local ops,opmap={},{}
-	if b1 then table.insert(ops,"1"); opmap[#ops]=1 end
-	if b2 then table.insert(ops,"2"); opmap[#ops]=2 end
-	if b3 then table.insert(ops,"3"); opmap[#ops]=3 end
-	local sel=Duel.SelectOption(tp,table.unpack(ops))+1
-	local op=opmap[sel]
+	local op=Duel.SelectEffect(tp,
+		{b1,aux.Stringid(id,0)},
+		{b2,aux.Stringid(id,1)},
+		{b3,aux.Stringid(id,2)})
 	e:SetLabel(op)
 	if op==1 then
 		Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_HAND+LOCATION_DECK)
