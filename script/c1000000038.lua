@@ -30,25 +30,30 @@ function s.initial_effect(c)
 	e2:SetOperation(s.tgop)
 	c:RegisterEffect(e2)
 end
-s.listed_names={id}
+s.listed_names={1000000000}
 s.listed_series={0x4003}
 function s.spfilter(c,e,tp)
-	return c:IsMonster() and (c:IsSetCard(0x4003) or c:IsRitualMonster())
+	return c:IsMonster() and ((c:IsSetCard(0x4003) and c:IsRitualMonster()) or c:IsCode(1000000000))
 		and c:IsCanBeSpecialSummoned(e,0,tp,true,false)
 end
 function s.matfilter(c,sc)
 	return c~=sc and c:IsMonster() and c:GetLevel()>0 and c:IsAbleToGrave()
 end
+function s.spcheckfilter(c,e,tp)
+	if not s.spfilter(c,e,tp) then return false end
+	local mg=Duel.GetMatchingGroup(s.matfilter,tp,LOCATION_HAND+LOCATION_MZONE,0,nil,c)
+	return #mg>0 and mg:GetSum(Card.GetLevel)>=c:GetLevel()
+end
 function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_MZONE)>0 
-		and Duel.IsExistingMatchingCard(s.spfilter,tp,LOCATION_HAND,0,1,nil,e,tp) end
+		and Duel.IsExistingMatchingCard(s.spcheckfilter,tp,LOCATION_HAND,0,1,nil,e,tp) end
 	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_HAND)
 	Duel.SetOperationInfo(0,CATEGORY_TOGRAVE,nil,0,tp,LOCATION_HAND+LOCATION_MZONE)
 end
 function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	if Duel.GetLocationCount(tp,LOCATION_MZONE)==0 then return end
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_CONFIRM)
-	local tc=Duel.SelectMatchingCard(tp,s.spfilter,tp,LOCATION_HAND,0,1,1,nil,e,tp):GetFirst()
+	local tc=Duel.SelectMatchingCard(tp,s.spcheckfilter,tp,LOCATION_HAND,0,1,1,nil,e,tp):GetFirst()
 	if tc then
 		Duel.ConfirmCards(1-tp,tc)
 		Duel.ShuffleHand(tp)
