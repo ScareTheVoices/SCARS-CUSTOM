@@ -1,12 +1,15 @@
---伝承の大御巫
 --Gateway to the Emerald Light
---Scripted by Hatter
+--Created By ScareTheVoices
 local s,id=GetID()
 function s.initial_effect(c)
 	--Activate (Continuous Spell)
 	local e0=Effect.CreateEffect(c)
+	e0:SetDescription(aux.Stringid(id,2))
+	e0:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
 	e0:SetType(EFFECT_TYPE_ACTIVATE)
 	e0:SetCode(EVENT_FREE_CHAIN)
+	e0:SetTarget(s.thtg)
+	e0:SetOperation(s.thop)
 	c:RegisterEffect(e0)
 	--Special Summon 1 "Mikanko" monster
 	local e1=Effect.CreateEffect(c)
@@ -18,20 +21,53 @@ function s.initial_effect(c)
 	e1:SetTarget(s.sptg)
 	e1:SetOperation(s.spop)
 	c:RegisterEffect(e1)
-	--Send 1 "Mikanko" card to the GY
-	local e2=Effect.CreateEffect(c)
-	e2:SetDescription(aux.Stringid(id,1))
-	e2:SetCategory(CATEGORY_TOGRAVE)
-	e2:SetType(EFFECT_TYPE_IGNITION)
-	e2:SetRange(LOCATION_GRAVE)
-	e2:SetCountLimit(1,{id,1})
-	e2:SetCost(Cost.SelfBanish)
-	e2:SetTarget(s.tgtg)
-	e2:SetOperation(s.tgop)
-	c:RegisterEffect(e2)
+	--Send this card to the GY; add 1 "Emerald Light" monster from your GY to your hand
+	local e3=Effect.CreateEffect(c)
+	e3:SetDescription(aux.Stringid(id,3))
+	e3:SetCategory(CATEGORY_TOGRAVE+CATEGORY_TOHAND)
+	e3:SetType(EFFECT_TYPE_IGNITION)
+	e3:SetRange(LOCATION_SZONE+LOCATION_FZONE)
+	e3:SetCountLimit(1,{id,2})
+	e3:SetCost(s.thcost)
+	e3:SetTarget(s.gythtg)
+	e3:SetOperation(s.gythop)
+	c:RegisterEffect(e3)
 end
 s.listed_names={1000000000}
 s.listed_series={0x4003}
+function s.thfilter(c)
+	return c:IsMonster() and c:IsSetCard(0x4003) and c:IsAbleToHand()
+end
+function s.thtg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.IsExistingMatchingCard(s.thfilter,tp,LOCATION_DECK,0,1,nil) end
+	Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK)
+end
+function s.thop(e,tp,eg,ep,ev,re,r,rp)
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+	local g=Duel.SelectMatchingCard(tp,s.thfilter,tp,LOCATION_DECK,0,1,1,nil)
+	if #g>0 and Duel.SendtoHand(g,nil,REASON_EFFECT)>0 then
+		Duel.ConfirmCards(1-tp,g)
+	end
+end
+function s.thcost(e,tp,eg,ep,ev,re,r,rp,chk)
+	local c=e:GetHandler()
+	if chk==0 then return c:IsAbleToGraveAsCost() end
+	Duel.SendtoGrave(c,REASON_COST)
+end
+function s.gythfilter(c)
+	return c:IsMonster() and (c:IsCode(1000000000) or (c:IsSetCard(0x4003) and c:IsRitualMonster())) and c:IsAbleToHand()
+end
+function s.gythtg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.IsExistingMatchingCard(s.gythfilter,tp,LOCATION_GRAVE,0,1,nil) end
+	Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_GRAVE)
+end
+function s.gythop(e,tp,eg,ep,ev,re,r,rp)
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+	local g=Duel.SelectMatchingCard(tp,s.gythfilter,tp,LOCATION_GRAVE,0,1,1,nil)
+	if #g>0 and Duel.SendtoHand(g,nil,REASON_EFFECT)>0 then
+		Duel.ConfirmCards(1-tp,g)
+	end
+end
 function s.spfilter(c,e,tp)
 	return c:IsMonster() and ((c:IsSetCard(0x4003) and c:IsRitualMonster()) or c:IsCode(1000000000))
 		and c:IsCanBeSpecialSummoned(e,0,tp,true,false)
@@ -71,19 +107,5 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 			Duel.SpecialSummonStep(tc,0,tp,tp,true,false,POS_FACEUP)
 			Duel.SpecialSummonComplete()
 		end
-	end
-end
-function s.tgfilter(c)
-	return c:IsSetCard(0x4003) and not c:IsCode(id) and c:IsAbleToGrave()
-end
-function s.tgtg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.IsExistingMatchingCard(s.tgfilter,tp,LOCATION_DECK,0,1,nil) end
-	Duel.SetOperationInfo(0,CATEGORY_TOGRAVE,nil,1,tp,LOCATION_DECK)
-end
-function s.tgop(e,tp,eg,ep,ev,re,r,rp)
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TOGRAVE)
-	local g=Duel.SelectMatchingCard(tp,s.tgfilter,tp,LOCATION_DECK,0,1,1,nil)
-	if #g>0 then
-		Duel.SendtoGrave(g,REASON_EFFECT)
 	end
 end
