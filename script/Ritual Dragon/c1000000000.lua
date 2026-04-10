@@ -1,4 +1,4 @@
---Ritual Dragon
+--Emerald Sovereign Ritual Dragon
 --Made by ScareTheVoices
 local s,id=GetID()
 function s.initial_effect(c)
@@ -75,19 +75,18 @@ function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
 	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,c,1,0,0)
 	c:ResetFlagEffect(id)
 end
+function s.thfilter(c)
+	return c:IsSetCard(0x4003) and c:IsSpellTrap() and c:IsAbleToHand()
+end
 function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	if c:IsRelateToEffect(e) then
-		Duel.SpecialSummon(c,1,tp,tp,false,false,POS_FACEUP)
-		-- After revival, add one card with setcode 0x4003 from graveyard to hand
-		local g=Duel.GetMatchingGroup(function(card)
-			return card:IsAbleToHand() and card:IsSetCard(0x4003) and card:IsType(TYPE_SPELL+TYPE_TRAP)
-		end,tp,LOCATION_GRAVE,0,nil)
-		if #g>0 then
-			Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
-			local sg=g:Select(tp,1,1,nil)
-			Duel.SendtoHand(sg,nil,REASON_EFFECT)
-			Duel.ConfirmCards(1-tp,sg)
+	if not c:IsRelateToEffect(e) or Duel.SpecialSummon(c,1,tp,tp,false,false,POS_FACEUP)==0 then return end
+	if Duel.IsExistingMatchingCard(s.thfilter,tp,LOCATION_GRAVE,0,1,nil)
+		and Duel.SelectYesNo(tp,aux.Stringid(id,2)) then
+		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+		local g=Duel.SelectMatchingCard(tp,s.thfilter,tp,LOCATION_GRAVE,0,1,1,nil)
+		if #g>0 and Duel.SendtoHand(g,nil,REASON_EFFECT)>0 then
+			Duel.ConfirmCards(1-tp,g)
 		end
 	end
 	
