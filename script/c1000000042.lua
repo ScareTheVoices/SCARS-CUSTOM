@@ -1,4 +1,5 @@
 --Emerald Light Bullet Train
+--Created by ScareTheVoices
 local s,id=GetID()
 function s.initial_effect(c)
 	-- Normal Summon: Special Summon 1 "Emerald Light" monster from Deck in Defense Position
@@ -56,7 +57,7 @@ function s.e1op(e,tp,eg,ep,ev,re,r,rp)
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
 	local g=Duel.SelectMatchingCard(tp,s.monfilter,tp,LOCATION_DECK,0,1,1,nil,e,tp)
 	if #g>0 then
-		Duel.SpecialSummon(g,0,tp,tp,false,false,POS_FACEUP_DEFENCE)
+		Duel.SpecialSummon(g,0,tp,tp,false,false,POS_FACEUP_DEFENSE)
 	end
 end
 
