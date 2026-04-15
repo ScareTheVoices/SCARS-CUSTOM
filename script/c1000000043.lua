@@ -52,9 +52,6 @@ end
 function s.activate(e, tp, eg, ep, ev, re, r, rp)
     local c=e:GetHandler()
     Duel.BreakEffect()
-    if c:IsLocation(LOCATION_GRAVE) and c:IsAbleToDeck() then
-        Duel.SendtoDeck(c,tp,-2,REASON_EFFECT)
-    end
     local g=Group.CreateGroup()
     for _,entry in ipairs(s.outsidedeck) do
         local code,count=entry[1],entry[2]
