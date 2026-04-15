@@ -44,14 +44,17 @@ function s.destg(e,tp,eg,ep,ev,re,r,rp,chk)
 end
 function s.desop(e,tp,eg,ep,ev,re,r,rp)
 	local g=Duel.GetMatchingGroup(s.desfilter,tp,LOCATION_HAND+LOCATION_ONFIELD,0,nil)
+	if #g==0 then return end
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+	local sg=g:Select(tp,1,Duel.GetFieldGroupCount(tp,0,LOCATION_MZONE),nil)
+	local ct=#sg
+	if ct==0 then return end
+	Duel.Destroy(sg,REASON_EFFECT)
 	local og=Duel.GetFieldGroup(tp,0,LOCATION_MZONE)
-	if #g*#og==0 then return end
+	if #og==0 then return end
+	if ct>#og then ct=#og end
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
-	local sg=g:Select(tp,1,#og,nil)
-	local oc=Duel.Destroy(sg,REASON_EFFECT)
-	if oc==0 then return end
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
-	local sg2=og:Select(tp,oc,oc,nil)
+	local sg2=og:Select(tp,ct,ct,nil)
 	Duel.Destroy(sg2,REASON_EFFECT)
 end
 function s.spr(e,tp,eg,ep,ev,re,r,rp)
