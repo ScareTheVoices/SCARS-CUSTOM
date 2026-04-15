@@ -20,27 +20,15 @@ s.outsidedeck={
     {87532344,3} -- Eternal Favorite
 }
 function s.initial_effect(c)
-    --Can be activated from the hand
-	local e1=Effect.CreateEffect(c)
-	e1:SetType(EFFECT_TYPE_SINGLE)
-	e1:SetCode(EFFECT_TRAP_ACT_IN_HAND)
-	c:RegisterEffect(e1)
-    --Vanish in GY
-    local e3=Effect.CreateEffect(c)
-    e3:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
-    e3:SetCode(EVENT_TO_GRAVE)
-    e3:SetOperation(s.gyop)
-    c:RegisterEffect(e3)
-    --Succ
-    local e2=Effect.CreateEffect(c)
-    e2:SetCategory(CATEGORY_RECOVER)
-    e2:SetType(EFFECT_TYPE_ACTIVATE)
-    e2:SetCode(EVENT_FREE_CHAIN)
-    e2:SetHintTiming(0,TIMINGS_CHECK_MONSTER)
-    e2:SetCost(s.cost)
-	e2:SetTarget(s.target)
-	e2:SetOperation(s.activate)
-	c:RegisterEffect(e2)
+    local e1=Effect.CreateEffect(c)
+    e1:SetCategory(CATEGORY_RECOVER)
+    e1:SetType(EFFECT_TYPE_ACTIVATE)
+    e1:SetCode(EVENT_FREE_CHAIN)
+    e1:SetHintTiming(0,TIMINGS_CHECK_MONSTER)
+    e1:SetCost(s.cost)
+    e1:SetTarget(s.target)
+    e1:SetOperation(s.activate)
+    c:RegisterEffect(e1)
 end
 
 function s.cost(e, tp, eg, ep, ev, re, r, rp, chk)
@@ -51,22 +39,17 @@ function s.cost(e, tp, eg, ep, ev, re, r, rp, chk)
         Duel.SendtoGrave(og, REASON_COST)
     end
     local g=Duel.GetMatchingGroup(aux.True, tp, LOCATION_ALL, 0, nil)
-    if g:IsContains(c) then
-        g:RemoveCard(c)
-    end
     if #g>0 then
         Duel.SendtoDeck(g, tp, -2, REASON_COST)
     end
 end
 function s.target(e, tp, eg, ep, ev, re, r, rp, chk)
     if chk==0 then return true end
-	Duel.SetTargetPlayer(tp)
-	Duel.SetTargetParam(1)
-	Duel.SetOperationInfo(0, CATEGORY_RECOVER, nil, 0, tp, 1)
+    Duel.SetTargetPlayer(tp)
+    Duel.SetTargetParam(1)
+    Duel.SetOperationInfo(0, CATEGORY_RECOVER, nil, 0, tp, 1)
 end
 function s.activate(e, tp, eg, ep, ev, re, r, rp)
-end
-function s.gyop(e,tp,eg,ep,ev,re,r,rp)
     local c=e:GetHandler()
     Duel.BreakEffect()
     if c:IsLocation(LOCATION_GRAVE) and c:IsAbleToDeck() then
