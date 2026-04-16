@@ -48,6 +48,9 @@ function s.target(e, tp, eg, ep, ev, re, r, rp, chk)
     Duel.SetTargetPlayer(tp)
     Duel.SetTargetParam(1)
     Duel.SetOperationInfo(0, CATEGORY_RECOVER, nil, 0, tp, 1)
+    if e:IsHasType(EFFECT_TYPE_ACTIVATE) then
+        Duel.SetChainLimit(aux.FALSE)
+    end
 end
 function s.activate(e, tp, eg, ep, ev, re, r, rp)
     local c=e:GetHandler()
@@ -65,4 +68,6 @@ function s.activate(e, tp, eg, ep, ev, re, r, rp)
         Duel.BreakEffect()
         Duel.Draw(tp,5,REASON_EFFECT)
     end
+    Duel.BreakEffect()
+    c:CancelToGrave()
 end
