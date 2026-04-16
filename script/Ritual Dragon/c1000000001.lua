@@ -1,7 +1,7 @@
 --The Ritual Spell
 local s,id=GetID()
 function s.initial_effect(c)
-	Ritual.AddProcGreaterCode(c, 8,nil,1000000000,1000000002)
+	Ritual.AddProcGreater(c,s.ritual_filter)
 	--spsummon
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
@@ -12,7 +12,11 @@ function s.initial_effect(c)
 	e1:SetOperation(s.spop)
 	c:RegisterEffect(e1)
 end
+function s.ritual_filter(c)
+	return c:IsCode(1000000000) or c:IsSetCard(0x4003)
+end
 s.listed_names={1000000000}
+s.listed_series={0x4003}
 function s.spcost(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return e:GetHandler():IsAbleToRemoveAsCost() end
 local c=e:GetHandler()
