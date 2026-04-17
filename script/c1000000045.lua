@@ -178,6 +178,17 @@ function s.damcon(e)
 	return false
 end
 function s.apply_granted_effect(c)
+	--This card's original ATK/DEF become 0
+	local e0=Effect.CreateEffect(c)
+	e0:SetType(EFFECT_TYPE_SINGLE)
+	e0:SetCode(EFFECT_SET_BASE_ATTACK)
+	e0:SetValue(0)
+	e0:SetReset(RESET_EVENT+RESETS_STANDARD)
+	c:RegisterEffect(e0,true)
+	local e0b=e0:Clone()
+	e0b:SetCode(EFFECT_SET_BASE_DEFENSE)
+	c:RegisterEffect(e0b,true)
+
 	--Other Emerald Light monsters you control have ATK/DEF set to 0
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_FIELD)
@@ -192,7 +203,7 @@ function s.apply_granted_effect(c)
 	e2:SetCode(EFFECT_SET_DEFENSE_FINAL)
 	c:RegisterEffect(e2,true)
 
-	--This card gains original ATK/DEF of all other Emerald Light monsters on the field
+	--This card gains original ATK/DEF of your other Emerald Light monsters
 	local e3=Effect.CreateEffect(c)
 	e3:SetType(EFFECT_TYPE_SINGLE)
 	e3:SetCode(EFFECT_UPDATE_ATTACK)
