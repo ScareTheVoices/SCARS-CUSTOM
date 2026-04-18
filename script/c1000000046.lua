@@ -1,4 +1,4 @@
---Emerald Light Raven Lancer
+--Emerald Light Feathered Blade
 --Made by ScareTheVoices
 local s,id=GetID()
 
@@ -77,7 +77,7 @@ end
 function s.desfilter(c,tp)
 	local re=c:GetReasonEffect()
 	return c:IsPreviousControler(1-tp) and c:IsPreviousLocation(LOCATION_MZONE)
-		and c:IsReason(REASON_EFFECT) and re and re:GetHandler():IsCode(1000000000)
+		and c:IsReason(REASON_EFFECT) and re and re:GetHandler():IsCode(1000000000) and re:GetHandler():IsControler(tp)
 end
 
 function s.sdescon(e,tp,eg,ep,ev,re,r,rp)
