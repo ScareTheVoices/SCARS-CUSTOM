@@ -22,7 +22,6 @@ function s.initial_effect(c)
 	e2:SetOperation(s.spr)
 	c:RegisterEffect(e2)
 	local e3=Effect.CreateEffect(c)
-	e3:SetDescription(aux.Stringid(id,1))
 	e3:SetCategory(CATEGORY_SPECIAL_SUMMON)
 	e3:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_O)
 	e3:SetRange(LOCATION_GRAVE)
@@ -85,7 +84,7 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if not c:IsRelateToEffect(e) or Duel.SpecialSummon(c,1,tp,tp,false,false,POS_FACEUP)==0 then return end
 	if Duel.IsExistingMatchingCard(s.thfilter,tp,LOCATION_GRAVE,0,1,nil)
-		and Duel.SelectYesNo(tp,aux.Stringid(id,2)) then
+		and Duel.SelectYesNo(tp,aux.Stringid(id,1)) then
 		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
 		local g=Duel.SelectMatchingCard(tp,s.thfilter,tp,LOCATION_GRAVE,0,1,1,nil)
 		if #g>0 and Duel.SendtoHand(g,nil,REASON_EFFECT)>0 then
