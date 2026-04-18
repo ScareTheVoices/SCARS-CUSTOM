@@ -90,6 +90,8 @@ function s.disop(e,tp,eg,ep,ev,re,r,rp)
 		e2:SetCode(EFFECT_DISABLE_EFFECT)
 		e2:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
 		tc:RegisterEffect(e2)
+		-- Recalculate stats after negation so ATK halving uses post-negation value
+		Duel.AdjustInstantly(tc)
 		local atk=tc:GetAttack()
 		if atk>0 then
 			local e3=Effect.CreateEffect(c)
