@@ -61,7 +61,7 @@ function s.thop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 function s.spfilter(c,tp)
-	return c:IsControler(tp) and c:IsLocation(LOCATION_MZONE) and (c:IsSetCard(0x4003) or c:IsCode(1000000000))
+	return c:IsControler(tp) and c:IsLocation(LOCATION_MZONE) and c:IsSetCard(0x4003)
 end
 function s.thfilter2(c)
 	return (c:IsCode(1000000000) or (c:IsSetCard(0x4003) and c:IsRitualMonster()))
