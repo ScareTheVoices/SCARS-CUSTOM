@@ -43,7 +43,6 @@ function s.contactfil(tp)
 end
 
 function s.contactop(g,tp)
-	Duel.ConfirmCards(1-tp,g)
 	Duel.SendtoDeck(g,nil,SEQ_DECKSHUFFLE,REASON_COST|REASON_MATERIAL)
 end
 
