@@ -1,4 +1,4 @@
--- Embers Needs a Hero!
+-- Embres Needs a Hero!
 local s,id=GetID()
 
 function s.initial_effect(c)
