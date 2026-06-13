@@ -22,7 +22,7 @@ function s.initial_effect(c)
     e1:SetType(EFFECT_TYPE_QUICK_O)       
     e1:SetCode(EVENT_FREE_CHAIN)          
     e1:SetRange(LOCATION_MZONE)
-    e1:SetCountLimit(1,id+1) -- FIXED: Removed chain limit parameter to make it a strict HOPT
+    e1:SetCountLimit(1,id+1) 
     e1:SetTarget(s.tokentg)               
     e1:SetOperation(s.tokenop)            
     c:RegisterEffect(e1)
@@ -168,12 +168,14 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
 end
 
 --================
--- Return to Deck Subroutine
+-- Return to Deck Subroutine (With Direct Shuffle Modification)
 --================
 function s.ret_op(e,tp,eg,ep,ev,re,r,rp)
     local tc=e:GetLabelObject()
     if tc and tc:IsLocation(LOCATION_REMOVED) then
-        Duel.SendtoDeck(tc,nil,SEQ_DECKTOP,REASON_EFFECT)
+        -- MODIFIED: Swapped SEQ_DECKTOP out for SEQ_DECKSHUFFLE
+        -- This directly shuffles the target card straight into its owner's main deck
+        Duel.SendtoDeck(tc,nil,SEQ_DECKSHUFFLE,REASON_EFFECT)
     end
 end
 
