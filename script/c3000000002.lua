@@ -9,21 +9,20 @@ function s.initial_effect(c)
     e0:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_HANDES)
     e0:SetType(EFFECT_TYPE_IGNITION)
     e0:SetRange(LOCATION_HAND)
-    e0:SetCountLimit(1,id)
+    e0:SetCountLimit(1,id) 
     e0:SetCost(s.spcost)
     e0:SetTarget(s.sptg)
     e0:SetOperation(s.spop)
     c:RegisterEffect(e0)
 
-    -- Effect 2: Token Summon Quick Effect (Hand/GY selection)
+    -- Effect 2: Token Summon Quick Effect (Locked to a hard Once Per Turn)
     local e1=Effect.CreateEffect(c)
     e1:SetDescription(aux.Stringid(id,0))
-    e1:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_TOKEN+CATEGORY_TOGRAVE)
+    e1:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_TOKEN+CATEGORY_REMOVE)
     e1:SetType(EFFECT_TYPE_QUICK_O)       
     e1:SetCode(EVENT_FREE_CHAIN)          
     e1:SetRange(LOCATION_MZONE)
-    e1:SetCountLimit(1,id+1,EFFECT_COUNT_CODE_CHAIN) 
-    e1:SetCondition(s.tokencon)           
+    e1:SetCountLimit(1,id+1) -- FIXED: Removed chain limit parameter to make it a strict HOPT
     e1:SetTarget(s.tokentg)               
     e1:SetOperation(s.tokenop)            
     c:RegisterEffect(e1)
@@ -73,18 +72,14 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 end
 
 --================
--- Token Summon Condition & Target
+-- Token Summon Target & Filtering Checks
 --================
 function s.tokenfilter(c)
     return c:IsCode(TOKEN_ID)
 end
 
-function s.tokencon(e,tp,eg,ep,ev,re,r,rp)
-    return not Duel.IsExistingMatchingCard(s.tokenfilter,tp,LOCATION_MZONE,0,1,nil)
-end
-
 function s.tgfilter(c)
-    return c:IsType(TYPE_MONSTER)
+    return c:IsType(TYPE_MONSTER) and c:IsAbleToRemove()
 end
 
 function s.tokentg(e,tp,eg,ep,ev,re,r,rp,chk)
@@ -93,10 +88,11 @@ function s.tokentg(e,tp,eg,ep,ev,re,r,rp,chk)
     
     Duel.SetOperationInfo(0,CATEGORY_TOKEN,nil,1,0,0)
     Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,0)
+    Duel.SetOperationInfo(0,CATEGORY_REMOVE,nil,1,0,0)
 end
 
 --================
--- Token Operation (Applies Search Effect to Token)
+-- Token Operation (Banish + Cage Return Mechanic)
 --================
 function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
     if Duel.GetLocationCount(tp,LOCATION_MZONE)<=0 then return end
@@ -112,10 +108,11 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
 
     if tc:IsLocation(LOCATION_HAND) then
         Duel.ConfirmCards(1-tp,tc) 
-        if Duel.SendtoGrave(tc,REASON_EFFECT) == 0 then return end 
     else
         Duel.HintSelection(sg)
     end
+
+    if Duel.Remove(tc,POS_FACEUP,REASON_EFFECT) == 0 then return end
 
     local token=Duel.CreateToken(tp,TOKEN_ID)
     if Duel.SpecialSummonStep(token,0,tp,tp,false,false,POS_FACEUP) then
@@ -141,17 +138,25 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
         e3:SetReset(RESET_EVENT+RESETS_STANDARD)
         token:RegisterEffect(e3)
 
-        -- NEW: Directly registers the Search Ignition effect onto the Token
+        -- Search Ignition effect
         local e4=Effect.CreateEffect(e:GetHandler())
-        e4:SetDescription(aux.Stringid(id,4)) -- Prompt: Add 1 Spell/Trap to hand
+        e4:SetDescription(aux.Stringid(id,4)) 
         e4:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
         e4:SetType(EFFECT_TYPE_IGNITION)
         e4:SetRange(LOCATION_MZONE)
-        e4:SetCountLimit(1) -- Once per turn for the token
+        e4:SetCountLimit(1) 
         e4:SetTarget(s.searchtg)
         e4:SetOperation(s.searchop)
         e4:SetReset(RESET_EVENT+RESETS_STANDARD)
         token:RegisterEffect(e4)
+
+        -- Cage Clause Trigger Setup
+        local e5=Effect.CreateEffect(e:GetHandler())
+        e5:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_CONTINUOUS)
+        e5:SetCode(EVENT_DESTROYED)
+        e5:SetLabelObject(tc) 
+        e5:SetOperation(s.ret_op)
+        token:RegisterEffect(e5)
 
         if tc:IsType(TYPE_EFFECT) then
             token:SetStatus(STATUS_EFFECT_ENABLED,true)
@@ -163,10 +168,19 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
 end
 
 --================
+-- Return to Deck Subroutine
+--================
+function s.ret_op(e,tp,eg,ep,ev,re,r,rp)
+    local tc=e:GetLabelObject()
+    if tc and tc:IsLocation(LOCATION_REMOVED) then
+        Duel.SendtoDeck(tc,nil,SEQ_DECKTOP,REASON_EFFECT)
+    end
+end
+
+--================
 -- Token Archetype Search Logic Subroutines
 --================
 function s.searchfilter(c)
-    -- Static library filter looking for cards mentioning Baron (3000000002) or Token (3000000003)
     return c:IsType(TYPE_SPELL+TYPE_TRAP) 
         and (Card.ListsCode(c,3000000002) or Card.ListsCode(c,3000000003)) 
         and c:IsAbleToHand()
