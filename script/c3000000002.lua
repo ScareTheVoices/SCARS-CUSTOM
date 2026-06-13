@@ -213,22 +213,23 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
 end
 
 --================
--- Spellcaster Logic Subroutines (Updated: Search/Recycle)
+-- Spellcaster Logic Subroutines (Hardcoded Static Fix)
 --================
 function s.scfilter(c)
-    -- Filter for Spells/Traps that mention Baron of Flame (id) or Wraith Token (TOKEN_ID)
-    return c:IsType(TYPE_SPELL+TYPE_TRAP) and (c:ListsCode(id) or c:ListsCode(TOKEN_ID)) and c:IsAbleToHand()
+    -- Explicitly checks if the card is a Spell/Trap
+    -- AND if it lists Baron of Flame (3000000002) OR Wraith Token (3000000003)
+    return c:IsType(TYPE_SPELL+TYPE_TRAP) 
+        and (Card.ListsCode(c,3000000002) or Card.ListsCode(c,3000000003)) 
+        and c:IsAbleToHand()
 end
 
 function s.spellcaster_tg(e,tp,eg,ep,ev,re,r,rp,chk)
-    -- Check if a matching card exists in the Deck or Graveyard
     if chk==0 then return Duel.IsExistingMatchingCard(s.scfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,nil) end
     Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK+LOCATION_GRAVE)
 end
 
 function s.spellcaster_op(e,tp,eg,ep,ev,re,r,rp)
     Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
-    -- Let the player select 1 card from either their Deck or Graveyard
     local g=Duel.SelectMatchingCard(tp,s.scfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,1,nil)
     if #g>0 then
         Duel.SendtoHand(g,nil,REASON_EFFECT)
