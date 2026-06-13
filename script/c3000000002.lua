@@ -3,7 +3,7 @@ local s,id=GetID()
 local TOKEN_ID = 3000000003
 
 function s.initial_effect(c)
-    -- Summon from hand if you control no monsters (Discard Cost)
+    -- Effect 1: Discard to Special Summon from hand
     local e0=Effect.CreateEffect(c)
     e0:SetDescription(aux.Stringid(id,2)) 
     e0:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_HANDES)
@@ -15,7 +15,7 @@ function s.initial_effect(c)
     e0:SetOperation(s.spop)
     c:RegisterEffect(e0)
 
-    -- Token Summon Quick Effect (Hand/GY selection + Choose any Type)
+    -- Effect 2: Token Summon Quick Effect (Hand/GY selection)
     local e1=Effect.CreateEffect(c)
     e1:SetDescription(aux.Stringid(id,0))
     e1:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_TOKEN+CATEGORY_TOGRAVE)
@@ -28,7 +28,7 @@ function s.initial_effect(c)
     e1:SetOperation(s.tokenop)            
     c:RegisterEffect(e1)
 
-    -- Cannot be attack target while controlling Token
+    -- Passive: Cannot be attack target while controlling Token
     local e2=Effect.CreateEffect(c)
     e2:SetType(EFFECT_TYPE_SINGLE)
     e2:SetCode(EFFECT_CANNOT_BE_BATTLE_TARGET)
@@ -38,7 +38,7 @@ function s.initial_effect(c)
     e2:SetValue(aux.imval1)
     c:RegisterEffect(e2)
 
-    -- Destroy replacement effect (Handles token destruction, counter-kill, and burn)
+    -- Passive Trigger: Destroy replacement effect (Handles token protection substitution)
     local e3=Effect.CreateEffect(c)
     e3:SetType(EFFECT_TYPE_CONTINUOUS+EFFECT_TYPE_SINGLE)
     e3:SetCode(EFFECT_DESTROY_REPLACE)
@@ -53,9 +53,7 @@ end
 --================
 -- Special Summon from Hand Functions
 --================
-
 function s.spcost(e,tp,eg,ep,ev,re,r,rp,chk)
-    -- Checks if you have at least 1 card in your hand to discard
     if chk==0 then return Duel.IsExistingMatchingCard(Card.IsDiscardable,tp,LOCATION_HAND,0,1,e:GetHandler()) end
     Duel.DiscardHand(tp,Card.IsDiscardable,1,1,REASON_COST+REASON_DISCARD,e:GetHandler())
 end
@@ -73,7 +71,6 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
         Duel.SpecialSummon(c,0,tp,tp,false,false,POS_FACEUP)
     end
 end
-
 
 --================
 -- Token Summon Condition & Target
@@ -99,7 +96,7 @@ function s.tokentg(e,tp,eg,ep,ev,re,r,rp,chk)
 end
 
 --================
--- Token Operation (With Multiclass Class Perks!)
+-- Token Operation (Applies Search Effect to Token)
 --================
 function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
     if Duel.GetLocationCount(tp,LOCATION_MZONE)<=0 then return end
@@ -144,125 +141,49 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
         e3:SetReset(RESET_EVENT+RESETS_STANDARD)
         token:RegisterEffect(e3)
 
-        -- Announce Type Selection (RACE_ALL)
-        local race = Duel.AnnounceRace(tp,1,RACE_ALL)
+        -- NEW: Directly registers the Search Ignition effect onto the Token
         local e4=Effect.CreateEffect(e:GetHandler())
-        e4:SetType(EFFECT_TYPE_SINGLE)
-        e4:SetCode(EFFECT_CHANGE_RACE)
-        e4:SetValue(race)
+        e4:SetDescription(aux.Stringid(id,4)) -- Prompt: Add 1 Spell/Trap to hand
+        e4:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
+        e4:SetType(EFFECT_TYPE_IGNITION)
+        e4:SetRange(LOCATION_MZONE)
+        e4:SetCountLimit(1) -- Once per turn for the token
+        e4:SetTarget(s.searchtg)
+        e4:SetOperation(s.searchop)
         e4:SetReset(RESET_EVENT+RESETS_STANDARD)
         token:RegisterEffect(e4)
-
-        ---------------------------------------------------------
-        -- CLASS PERK 1: SPELLCASTER (Ignition: Search/Recycle Support S/T)
-        ---------------------------------------------------------
-        if race == RACE_SPELLCASTER then
-            local sc1=Effect.CreateEffect(e:GetHandler())
-            sc1:SetDescription(aux.Stringid(id,4)) -- Prompt: Add 1 Spell/Trap to hand
-            sc1:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
-            sc1:SetType(EFFECT_TYPE_IGNITION)
-            sc1:SetRange(LOCATION_MZONE)
-            sc1:SetCountLimit(1) -- Once per turn
-            sc1:SetTarget(s.spellcaster_tg)
-            sc1:SetOperation(s.spellcaster_op)
-            sc1:SetReset(RESET_EVENT+RESETS_STANDARD)
-            token:RegisterEffect(sc1)
-        
-        ---------------------------------------------------------
-        -- CLASS PERK 2: WARRIOR (Ignition: Destroy enemy monster + Level x 200 Burn)
-        ---------------------------------------------------------
-        elseif race == RACE_WARRIOR then
-            local wa1=Effect.CreateEffect(e:GetHandler())
-            wa1:SetDescription(aux.Stringid(id,3)) 
-            wa1:SetCategory(CATEGORY_DESTROY+CATEGORY_DAMAGE)
-            wa1:SetType(EFFECT_TYPE_IGNITION)
-            wa1:SetRange(LOCATION_MZONE)
-            wa1:SetCountLimit(1) 
-            wa1:SetTarget(s.warrior_tg)
-            wa1:SetOperation(s.warrior_op)
-            wa1:SetReset(RESET_EVENT+RESETS_STANDARD)
-            token:RegisterEffect(wa1)
-
-        ---------------------------------------------------------
-        -- CLASS PERK 3: BEAST (Conditional Direct Attack)
-        ---------------------------------------------------------
-        elseif race == RACE_BEAST then
-            local be1=Effect.CreateEffect(e:GetHandler())
-            be1:SetType(EFFECT_TYPE_SINGLE)
-            be1:SetCode(EFFECT_DIRECT_ATTACK)
-            be1:SetCondition(s.beast_dircon) 
-            be1:SetReset(RESET_EVENT+RESETS_STANDARD)
-            token:RegisterEffect(be1)
-
-            local be2=Effect.CreateEffect(e:GetHandler())
-            be2:SetType(EFFECT_TYPE_SINGLE)
-            be2:SetCode(EFFECT_CHANGE_BATTLE_DAMAGE)
-            be2:SetCondition(s.beast_dircon) 
-            be2:SetValue(aux.ChangeBattleDamage(1,HALF_DAMAGE))
-            be2:SetReset(RESET_EVENT+RESETS_STANDARD)
-            token:RegisterEffect(be2)
-        end
 
         if tc:IsType(TYPE_EFFECT) then
             token:SetStatus(STATUS_EFFECT_ENABLED,true)
         else
             token:SetStatus(STATUS_EFFECT_ENABLED,false)
         end
-    end -- THIS WAS THE MISSING END CALL THAT FIXED THE CRASH
+    end 
     Duel.SpecialSummonComplete()
 end
 
 --================
--- Spellcaster Logic Subroutines (Hardcoded Static Fix)
+-- Token Archetype Search Logic Subroutines
 --================
-function s.scfilter(c)
-    -- Explicitly checks if the card is a Spell/Trap
-    -- AND if it lists Baron of Flame (3000000002) OR Wraith Token (3000000003)
+function s.searchfilter(c)
+    -- Static library filter looking for cards mentioning Baron (3000000002) or Token (3000000003)
     return c:IsType(TYPE_SPELL+TYPE_TRAP) 
         and (Card.ListsCode(c,3000000002) or Card.ListsCode(c,3000000003)) 
         and c:IsAbleToHand()
 end
 
-function s.spellcaster_tg(e,tp,eg,ep,ev,re,r,rp,chk)
-    if chk==0 then return Duel.IsExistingMatchingCard(s.scfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,nil) end
+function s.searchtg(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then return Duel.IsExistingMatchingCard(s.searchfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,nil) end
     Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK+LOCATION_GRAVE)
 end
 
-function s.spellcaster_op(e,tp,eg,ep,ev,re,r,rp)
+function s.searchop(e,tp,eg,ep,ev,re,r,rp)
     Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
-    local g=Duel.SelectMatchingCard(tp,s.scfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,1,nil)
+    local g=Duel.SelectMatchingCard(tp,s.searchfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,1,nil)
     if #g>0 then
         Duel.SendtoHand(g,nil,REASON_EFFECT)
         Duel.ConfirmCards(1-tp,g)
     end
-end
-
---================
--- Warrior Logic Subroutines (Updated with Level Burn!)
---================
-function s.warrior_tg(e,tp,eg,ep,ev,re,r,rp,chk)
-    if chk==0 then return Duel.IsExistingMatchingCard(Card.IsType,tp,0,LOCATION_MZONE,1,nil,TYPE_MONSTER) end
-    local g=Duel.GetMatchingGroup(Card.IsType,tp,0,LOCATION_MZONE,nil,TYPE_MONSTER)
-    Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
-    Duel.SetOperationInfo(0,CATEGORY_DAMAGE,nil,0,1-tp,0) 
-end
-function s.warrior_op(e,tp,eg,ep,ev,re,r,rp)
-    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
-    local g=Duel.SelectMatchingCard(tp,Card.IsType,tp,0,LOCATION_MZONE,1,1,nil,TYPE_MONSTER)
-    local tc=g:GetFirst()
-    if tc then
-        local lv=tc:GetLevel()
-        if Duel.Destroy(tc,REASON_EFFECT)>0 and lv>0 then
-            Duel.Damage(1-tp,lv*200,REASON_EFFECT)
-        end
-    end
-end
-
---================
--- Beast Condition Subroutine
---================
-function s.beast_dircon(e)
-    return Duel.GetFieldGroupCount(e:GetHandlerPlayer(),0,LOCATION_MZONE)>0
 end
 
 --================
@@ -281,22 +202,13 @@ end
 
 function s.desrepop(e,tp,eg,ep,ev,re,r,rp)
     local token=Duel.GetFirstMatchingCard(function(tc) return tc:IsCode(TOKEN_ID) and tc:IsFaceup() end,tp,LOCATION_MZONE,0,nil)
-    if token and Duel.Destroy(token,REASON_EFFECT+REASON_REPLACE) > 0 then
-        local reason_effect = e:GetHandler():GetReasonEffect()
-        if reason_effect and reason_effect:IsActiveType(TYPE_MONSTER) then
-            local rc = reason_effect:GetHandler()
-            if rc and rc:IsRelatableToField() then
-
-                local dam = rc:GetAttack()
-                if Duel.Destroy(rc,REASON_EFFECT) > 0 and dam > 0 then
-                    Duel.Damage(1-tp,dam,REASON_EFFECT)
-                end
-            end
-        end
+    if token then
+        Duel.Destroy(token,REASON_EFFECT+REASON_REPLACE)
     end
 end
+
 --================
--- Attack Target Protection Condition
+-- Battle Protection Condition
 --================
 function s.atkcon(e)
     return Duel.IsExistingMatchingCard(s.tokenfilter,e:GetHandlerPlayer(),LOCATION_MZONE,0,1,nil)
