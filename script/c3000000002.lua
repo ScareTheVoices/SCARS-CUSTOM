@@ -154,14 +154,16 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
         token:RegisterEffect(e4)
 
         ---------------------------------------------------------
-        -- CLASS PERK 1: SPELLCASTER (Burn 500 when your S/T hits GY)
+        -- CLASS PERK 1: SPELLCASTER (Ignition: Search/Recycle Support S/T)
         ---------------------------------------------------------
         if race == RACE_SPELLCASTER then
             local sc1=Effect.CreateEffect(e:GetHandler())
-            sc1:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
-            sc1:SetCode(EVENT_TO_GRAVE)
+            sc1:SetDescription(aux.Stringid(id,4)) -- Prompt: Add 1 Spell/Trap to hand
+            sc1:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
+            sc1:SetType(EFFECT_TYPE_IGNITION)
             sc1:SetRange(LOCATION_MZONE)
-            sc1:SetCondition(s.spellcaster_con)
+            sc1:SetCountLimit(1) -- Once per turn
+            sc1:SetTarget(s.spellcaster_tg)
             sc1:SetOperation(s.spellcaster_op)
             sc1:SetReset(RESET_EVENT+RESETS_STANDARD)
             token:RegisterEffect(sc1)
@@ -211,17 +213,27 @@ function s.tokenop(e,tp,eg,ep,ev,re,r,rp)
 end
 
 --================
--- Spellcaster Logic Subroutines
+-- Spellcaster Logic Subroutines (Updated: Search/Recycle)
 --================
-function s.scfilter(c,tp)
-    return c:IsType(TYPE_SPELL+TYPE_TRAP) and c:IsControler(tp)
+function s.scfilter(c)
+    -- Filter for Spells/Traps that mention Baron of Flame (id) or Wraith Token (TOKEN_ID)
+    return c:IsType(TYPE_SPELL+TYPE_TRAP) and (c:ListsCode(id) or c:ListsCode(TOKEN_ID)) and c:IsAbleToHand()
 end
-function s.spellcaster_con(e,tp,eg,ep,ev,re,r,rp)
-    return eg:IsExists(s.scfilter,1,nil,tp)
+
+function s.spellcaster_tg(e,tp,eg,ep,ev,re,r,rp,chk)
+    -- Check if a matching card exists in the Deck or Graveyard
+    if chk==0 then return Duel.IsExistingMatchingCard(s.scfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,nil) end
+    Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK+LOCATION_GRAVE)
 end
+
 function s.spellcaster_op(e,tp,eg,ep,ev,re,r,rp)
-    Duel.Hint(HINT_CARD,0,id)
-    Duel.Damage(1-tp,500,REASON_EFFECT)
+    Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
+    -- Let the player select 1 card from either their Deck or Graveyard
+    local g=Duel.SelectMatchingCard(tp,s.scfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,1,nil)
+    if #g>0 then
+        Duel.SendtoHand(g,nil,REASON_EFFECT)
+        Duel.ConfirmCards(1-tp,g)
+    end
 end
 
 --================
