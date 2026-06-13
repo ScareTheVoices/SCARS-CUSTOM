@@ -1,4 +1,4 @@
--- Wraith Claw! (Art-Matched)
+-- Wraith Claw! (Art-Matched - Unrestricted Battle Perks)
 local s,id=GetID()
 local BARON_ID = 3000000002
 local TOKEN_ID = 3000000003
@@ -13,12 +13,13 @@ function s.initial_effect(c)
     e1:SetCategory(CATEGORY_DAMAGE+CATEGORY_ATKCHANGE)
     e1:SetType(EFFECT_TYPE_IGNITION)
     e1:SetRange(LOCATION_SZONE)
-    e1:SetCountLimit(1,id)
+    e1:SetCountLimit(1,id) -- Keeping ONLY the Ignition Core Once Per Turn
     e1:SetTarget(s.burntg)
     e1:SetOperation(s.burnop)
     c:RegisterEffect(e1)
 
     -- Effect 2: Searing Claws (Armades/Ancient Gear battle locking trap seal)
+    -- REMOVED: No Turn Limits. Works passively on every single engagement.
     local e2=Effect.CreateEffect(c)
     e2:SetType(EFFECT_TYPE_FIELD)
     e2:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
@@ -30,13 +31,13 @@ function s.initial_effect(c)
     c:RegisterEffect(e2)
 
     -- Effect 3: Total Incineration (Send 1 card to GY on battle victory)
+    -- REMOVED: SetCountLimit deleted. Triggers on every successful kill.
     local e3=Effect.CreateEffect(c)
     e3:SetDescription(aux.Stringid(id,1)) -- Prompt: Incinerate 1 card
     e3:SetCategory(CATEGORY_TOGRAVE)
     e3:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_O)
     e3:SetCode(EVENT_BATTLE_DESTROYING)
     e3:SetRange(LOCATION_SZONE)
-    e3:SetCountLimit(1,id+1)
     e3:SetCondition(s.tgcon)
     e3:SetTarget(s.tgtg)
     e3:SetOperation(s.tgop)
@@ -53,17 +54,15 @@ end
 -- Blazing Core Subroutines
 --================
 function s.burntg(e,tp,eg,ep,ev,re,r,rp,chk)
-    if chk==0 then return e:GetHandler():GetEquippedItem() ~= nil end
+    if chk==0 then return e:GetHandler():GetEquipTarget() ~= nil end
     Duel.SetOperationInfo(0,CATEGORY_DAMAGE,nil,0,1-tp,500)
 end
 
 function s.burnop(e,tp,eg,ep,ev,re,r,rp)
     local c=e:GetHandler()
     if not c:IsRelateToEffect(e) then return end
-    local ec=c:GetEquippedItem()
-    -- 1. Inflict 500 Burn Damage first
+    local ec=c:GetEquipTarget()
     if Duel.Damage(1-tp,500,REASON_EFFECT) > 0 and ec and ec:IsFaceup() then
-        -- 2. Give the equipped monster +500 ATK until end of turn
         local e1=Effect.CreateEffect(c)
         e1:SetType(EFFECT_TYPE_SINGLE)
         e1:SetCode(EFFECT_UPDATE_ATTACK)
@@ -77,13 +76,11 @@ end
 -- Searing Claws Battle Lock Subroutines
 --================
 function s.actcon(e)
-    local ec=e:GetHandler():GetEquippedItem()
-    -- Active only when your equipped card is fighting
+    local ec=e:GetHandler():GetEquipTarget()
     return ec and (Duel.GetAttacker()==ec or Duel.GetAttackTarget()==ec)
 end
 
 function s.actval(e,re,tp)
-    -- Blocks all card activations completely
     return true
 end
 
@@ -91,12 +88,11 @@ end
 -- Total Incineration Subroutines
 --================
 function s.tgcon(e,tp,eg,ep,ev,re,r,rp)
-    local ec=e:GetHandler():GetEquippedItem()
+    local ec=e:GetHandler():GetEquipTarget()
     return ec and eg:IsContains(ec) and ec:IsStatus(STATUS_OPPO_BATTLE)
 end
 
 function s.tgtg(e,tp,eg,ep,ev,re,r,rp,chk)
-    -- Non-targeting send to GY to bypass targeting immunities
     if chk==0 then return Duel.IsExistingMatchingCard(nil,tp,0,LOCATION_ONFIELD,1,nil) end
     Duel.SetOperationInfo(0,CATEGORY_TOGRAVE,nil,1,1-tp,LOCATION_ONFIELD)
 end
