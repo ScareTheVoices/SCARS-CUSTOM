@@ -1,5 +1,4 @@
--- Custom Monster: Void-Eyes Empty Dragon
--- Card ID: 100000047
+--Darkest-Eyes Void Dragon
 local s,id=GetID()
 function s.initial_effect(c)
 	-- Effect 1: Absorption/Destruction Quick Effect (Targeting via Alternative Blue-Eyes logic)
