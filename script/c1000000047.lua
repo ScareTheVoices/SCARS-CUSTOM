@@ -1,8 +1,8 @@
 -- Custom Monster: Void-Eyes Empty Dragon
--- Card ID: 100000001
+-- Card ID: 100000047
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Effect 1: Absorption/Destruction Quick Effect
+	-- Effect 1: Absorption/Destruction Quick Effect (Targeting via Alternative Blue-Eyes logic)
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
 	e1:SetCategory(CATEGORY_EQUIP+CATEGORY_DESTROY)
@@ -11,8 +11,8 @@ function s.initial_effect(c)
 	e1:SetProperty(EFFECT_FLAG_CARD_TARGET)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCountLimit(1)
-	e1:SetTarget(s.eqtg)
-	e1:SetOperation(s.eqop)
+	e1:SetTarget(s.destg)
+	e1:SetOperation(s.desop)
 	c:RegisterEffect(e1)
 	
 	-- Effect 2: Gain ATK/DEF from equipped cards
@@ -40,38 +40,29 @@ function s.initial_effect(c)
 end
 
 -- --- EFFECT 1 FUNCTIONS (Equip or Destroy) ---
-function s.eqfilter(c)
-	return c:IsFaceUp()
-end
 function s.statfilter(c,id)
 	return c:GetFlagEffect(id)>0
 end
-function s.eqtg(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
-	if chkc then return chkc:IsLocation(LOCATION_MZONE) and chkc:IsControler(1-tp) and s.eqfilter(chkc) end
-	if chk then return Duel.IsExistingTarget(s.eqfilter,tp,0,LOCATION_MZONE,1,nil) end
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TARGET)
-	local g=Duel.SelectTarget(tp,s.eqfilter,tp,0,LOCATION_MZONE,1,1,nil)
-	
-	local tc=g:GetFirst()
-	-- If target is Ritual but we ALREADY have a Ritual card equipped by this effect, it cannot be targeted
-	if tc and tc:IsType(TYPE_RITUAL) and e:GetHandler():GetEquipGroup():IsExists(s.statfilter,1,nil,id) then
-		return false
-	end
-
-	Duel.SetOperationInfo(0,CATEGORY_EQUIP,g,1,0,0)
+function s.destg(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+	if chkc then return chkc:IsLocation(LOCATION_MZONE) and chkc:IsControler(1-tp) end
+	if chk==0 then return Duel.IsExistingTarget(aux.TRUE,tp,0,LOCATION_MZONE,1,nil) end
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+	local g=Duel.SelectTarget(tp,aux.TRUE,tp,0,LOCATION_MZONE,1,1,nil)
 	Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
+	Duel.SetOperationInfo(0,CATEGORY_EQUIP,g,1,0,0)
 end
-function s.eqop(e,tp,eg,ep,ev,re,r,rp)
+function s.desop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local tc=Duel.GetFirstTarget()
 	if not tc or not tc:IsRelateToEffect(e) then return end
 	
-	-- Check if it's a Ritual Monster AND we don't already have one equipped
-	if tc:IsType(TYPE_RITUAL) then
-		if c:GetEquipGroup():IsExists(s.statfilter,1,nil,id) then return end -- Safety double check
+	-- Check if it's a Ritual Monster AND we don't already have one equipped (max. 1)
+	local has_equip = c:GetEquipGroup():IsExists(s.statfilter,1,nil,id)
+	
+	-- Added Duel.SelectEffectYesNo choice wrapper for player option selection
+	if tc:IsType(TYPE_RITUAL) and not has_equip and Duel.SelectEffectYesNo(tp,c,aux.Stringid(id,2)) then
 		if c:IsFacedown() or not c:IsRelateToEffect(e) then return end
 		if not Duel.Equip(tp,tc,c,false) then return end
-		-- Add Equipping rules & relation flags
 		local e1=Effect.CreateEffect(c)
 		e1:SetType(EFFECT_TYPE_SINGLE)
 		e1:SetProperty(EFFECT_FLAG_OWNER_RELATE)
@@ -79,10 +70,9 @@ function s.eqop(e,tp,eg,ep,ev,re,r,rp)
 		e1:SetValue(s.eqlimit)
 		e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 		tc:RegisterEffect(e1)
-		-- Flag to mark it was equipped by THIS card's effect
 		tc:RegisterFlagEffect(id,RESET_EVENT+RESETS_STANDARD,0,1)
 	else
-		-- Otherwise, Destroy
+		-- Executes if target is not Ritual, slot is full, OR player chooses "No" on the prompt
 		Duel.Destroy(tc,REASON_EFFECT)
 	end
 end
@@ -122,15 +112,15 @@ function s.subtg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if Duel.SelectEffectYesNo(tp,c,aux.Stringid(id,1)) then
 		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
 		local g=c:GetEquipGroup():FilterSelect(tp,s.statfilter,1,1,nil,id)
-		Duel.SetTargetCard(g)
+		e:SetLabelObject(g:GetFirst())
 		return true
 	end
 	return false
 end
 function s.subval(e,c)
-	local g=Duel.GetChainInfo(0,CHAININFO_TARGET_CARDS)
-	if g and g:IsContains(c) then
-		Duel.Destroy(c,REASON_EFFECT+REASON_REPLACE)
+	local tc=e:GetLabelObject()
+	if tc then
+		Duel.Destroy(tc,REASON_EFFECT+REASON_REPLACE)
 		return true
 	end
 	return false
