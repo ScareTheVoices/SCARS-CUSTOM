@@ -27,9 +27,10 @@ function s.initial_effect(c)
 	e3:SetValue(s.defval)
 	c:RegisterEffect(e3)
 
-	-- Effect 3: THE NAGLFAR BLUEPRINT REWRITE - Field/Continuous Destroy Replace Loop
+	-- Effect 3: Field/Continuous Destroy Replace Loop (Bounces equipped card to hand)
 	local e4=Effect.CreateEffect(c)
-	e4:SetType(EFFECT_TYPE_CONTINUOUS+EFFECT_TYPE_FIELD) -- Field scale interceptor matching Naglfar
+	e4:SetCategory(CATEGORY_TOHAND)
+	e4:SetType(EFFECT_TYPE_CONTINUOUS+EFFECT_TYPE_FIELD) 
 	e4:SetCode(EFFECT_DESTROY_REPLACE)
 	e4:SetRange(LOCATION_MZONE)
 	e4:SetTarget(s.desreptg)
@@ -98,48 +99,39 @@ function s.defval(e,c)
 	return def
 end
 
--- --- NAGLFAR ARCHITECTURE IMPLEMENTATION ---
+-- --- REPLACEMENT ARCHITECTURE ---
 function s.repfilter(c,e)
-	-- Targets only this handler card, checking if it is facing destruction
 	return c==e:GetHandler() and c:IsLocation(LOCATION_MZONE)
 		and c:IsReason(REASON_BATTLE|REASON_EFFECT) and not c:IsReason(REASON_REPLACE)
 end
 function s.desfilter(c,e)
-	-- Verifies the shield card is valid, destructible, and not already designated for death
-	return s.statfilter(c,id) and c:IsDestructable(e)
-		and not c:IsStatus(STATUS_DESTROY_CONFIRMED)
+	-- Verifies the shield card is valid and can be returned to the hand
+	return s.statfilter(c,id) and c:IsAbleToHand()
 end
 function s.desreptg(e,tp,eg,ep,ev,re,r,rp,chk)
 	local c=e:GetHandler()
 	local g=c:GetEquipGroup()
 	
-	-- Evaluation layer confirming the check event targets Void-Eyes and a valid shield card exists
 	if chk==0 then return eg:IsExists(s.repfilter,1,nil,e)
 		and g:IsExists(s.desfilter,1,nil,e) end
 		
-	-- Triggers player choice popup box interface safely inside continuous scope
 	if Duel.SelectEffectYesNo(tp,c,aux.Stringid(id,1)) then
-		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESREPLACE)
+		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_RTOHAND)
 		local sg=g:FilterSelect(tp,s.desfilter,1,1,nil,e)
 		e:SetLabelObject(sg:GetFirst())
 		Duel.HintSelection(sg)
-		-- Safety flag states to the game engine that this item is locked for sacrifice resolution
-		sg:GetFirst():SetStatus(STATUS_DESTROY_CONFIRMED,true)
 		return true
 	else 
 		return false 
 	end
 end
 function s.desrepval(e,c)
-	-- Standard Naglfar passback validating targeted item relation properties
 	return s.repfilter(c,e)
 end
 function s.desrepop(e,tp,eg,ep,ev,re,r,rp)
 	local tc=e:GetLabelObject()
 	if tc then
-		-- Remove safety confirmation locks and cleanly apply substitution rules execution
-		tc:SetStatus(STATUS_DESTROY_CONFIRMED,false)
-		Duel.Destroy(tc,REASON_EFFECT|REASON_REPLACE)
+		-- Bounce the card to the hand instead of destroying it
+		Duel.SendtoHand(tc,nil,REASON_EFFECT|REASON_REPLACE)
 	end
 end
-
