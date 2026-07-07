@@ -13,7 +13,7 @@ function s.initial_effect(c)
 	e1:SetTarget(s.destg)
 	e1:SetOperation(s.desop)
 	c:RegisterEffect(e1)
-	--2: Battle Actiavtion Lockdown
+	--2: Battle Activation Lockdown
 	local e2=Effect.CreateEffect(c)
 	e2:SetType(EFFECT_TYPE_FIELD)
 	e2:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
@@ -29,7 +29,7 @@ function s.initial_effect(c)
 	e3:SetCategory(CATEGORY_NEGATE+CATEGORY_REMOVE)
 	e3:SetType(EFFECT_TYPE_QUICK_O)
 	e3:SetCode(EVENT_CHAINING)
-	e3:SetProperty(EFFECT_FLAG_DAMAGE_STEP+EFFECT_FLAG_DAMAGE_ROLL)
+	e3:SetProperty(EFFECT_FLAG_DAMAGE_STEP)
 	e3:SetRange(LOCATION_MZONE)
 	e3:SetCountLimit(1)
 	e3:SetCondition(s.negcon)
@@ -52,7 +52,7 @@ end
 --Targeting / Check logic for card destruction count
 function s.destg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then
-		local g=Duel.GetMatchingCardGrid(s.count_filter,tp,LOCATION_GRAVE,0,nil)
+		local g=Duel.GetMatchingGroup(s.count_filter,tp,LOCATION_GRAVE,0,nil)
 		local count=g:GetClassCount(Card.GetCode)
 		return count>0 and Duel.IsExistingMatchingCard(nil,tp,0,LOCATION_ONFIELD,1,nil)
 	end
@@ -61,7 +61,7 @@ end
 
 --Resolution logic for card destruction up to GY count
 function s.desop(e,tp,eg,ep,ev,re,r,rp)
-	local g_gy=Duel.GetMatchingCardGrid(s.count_filter,tp,LOCATION_GRAVE,0,nil)
+	local g_gy=Duel.GetMatchingGroup(s.count_filter,tp,LOCATION_GRAVE,0,nil)
 	local count=g_gy:GetClassCount(Card.GetCode)
 	if count==0 then return end
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
@@ -91,10 +91,11 @@ end
 function s.negcost(e,tp,eg,ep,ev,re,r,rp,chk)
 	local c=e:GetHandler()
 	if chk==0 then return Duel.IsExistingMatchingCard(s.costfilter,tp,LOCATION_HAND+LOCATION_MZONE,0,1,c,c) end
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TRIBUTE)
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_RELEASE)
 	local g=Duel.SelectMatchingCard(tp,s.costfilter,tp,LOCATION_HAND+LOCATION_MZONE,0,1,1,c,c)
 	Duel.Release(g,REASON_COST)
 end
+
 
 --Targeting info for the Negate & Banish mechanics
 function s.negtg(e,tp,eg,ep,ev,re,r,rp,chk)
