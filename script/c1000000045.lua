@@ -1,8 +1,8 @@
---Emerald Light Sovereign
+--Emerald Light Dreadnought Sovereign
 --Made by ScareTheVoices
 local s,id=GetID()
-s.listed_series={0x4003}
-s.listed_names={1000000000}
+s.listed_series={0x4003} 
+s.listed_names={1000000000} -- Emerald Sovereign Ritual Dragon
 
 function s.selfspcon(e)
 	return e and e:GetHandler() and e:GetHandler():IsCode(id) and e:GetLabel()==id
@@ -31,42 +31,13 @@ function s.initial_effect(c)
 	e1:SetOperation(s.spop)
 	c:RegisterEffect(e1)
 
-	--Cannot summon code 1000000000 while this card is face-up
+	--When this card leaves the field: prepare the background tracker
 	local e2=Effect.CreateEffect(c)
-	e2:SetType(EFFECT_TYPE_FIELD)
-	e2:SetCode(EFFECT_CANNOT_SPECIAL_SUMMON)
-	e2:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
-	e2:SetRange(LOCATION_MZONE)
-	e2:SetTargetRange(1,0)
-	e2:SetTarget(s.splimitcode)
+	e2:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_CONTINUOUS) -- Continuous means it triggers without prompting you
+	e2:SetCode(EVENT_LEAVE_FIELD)
+	e2:SetCondition(s.rvcon)
+	e2:SetOperation(s.rvop)
 	c:RegisterEffect(e2)
-	local e3=e2:Clone()
-	e3:SetCode(EFFECT_CANNOT_SUMMON)
-	c:RegisterEffect(e3)
-	local e4=e2:Clone()
-	e4:SetCode(EFFECT_CANNOT_MSET)
-	c:RegisterEffect(e4)
-
-	--You cannot control code 1000000000 while this card is face-up
-	local e5=Effect.CreateEffect(c)
-	e5:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
-	e5:SetCode(EVENT_ADJUST)
-	e5:SetRange(LOCATION_MZONE)
-	e5:SetOperation(s.ctop)
-	c:RegisterEffect(e5)
-
-	--When this card leaves the field: revive code 1000000000 on your next Standby Phase
-	local e6=Effect.CreateEffect(c)
-	e6:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_O)
-	e6:SetCode(EVENT_LEAVE_FIELD)
-	e6:SetProperty(EFFECT_FLAG_DELAY)
-	e6:SetCondition(s.rvcon)
-	e6:SetOperation(s.rvop)
-	c:RegisterEffect(e6)
-end
-
-function s.splimitcode(e,c)
-	return c:IsCode(1000000000)
 end
 
 function s.reqfilter(c)
@@ -98,41 +69,35 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 
-function s.ctfilter(c,tp)
-	return c:IsFaceup() and c:IsCode(1000000000) and c:IsControler(tp) and c:IsAbleToGraveAsCost()
-end
-function s.ctop(e,tp,eg,ep,ev,re,r,rp)
-	local g=Duel.GetMatchingGroup(s.ctfilter,tp,LOCATION_MZONE,0,nil,tp)
-	if #g>0 then
-		Duel.SendtoGrave(g,REASON_RULE)
-	end
-end
-
 function s.rvcon(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	return c:IsPreviousLocation(LOCATION_MZONE) and c:IsPreviousPosition(POS_FACEUP)
 end
+-- Quietly registers an optional Graveyard trigger for the next Standby Phase
 function s.rvop(e,tp,eg,ep,ev,re,r,rp)
-	tp=e:GetHandler():GetPreviousControler()
-	local e1=Effect.CreateEffect(e:GetHandler())
-	e1:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_O)
+	local c=e:GetHandler()
+	local e1=Effect.CreateEffect(c)
+	e1:SetDescription(aux.Stringid(id,2)) -- Assumes string index 2 or generic message
+	e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
+	e1:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_O) -- Optional prompt
 	e1:SetCode(EVENT_PHASE+PHASE_STANDBY)
-	e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
-	e1:SetTargetRange(1,0)
+	e1:SetRange(LOCATION_GRAVE)
 	e1:SetCountLimit(1)
 	e1:SetLabel(Duel.GetTurnCount())
 	e1:SetCondition(s.rvspcon)
 	e1:SetTarget(s.rvsptg)
 	e1:SetOperation(s.rvspop)
-	e1:SetReset(RESET_PHASE+PHASE_STANDBY+RESET_SELF_TURN,2)
-	Duel.RegisterEffect(e1,tp)
+	e1:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_STANDBY+RESET_SELF_TURN,2)
+	c:RegisterEffect(e1)
 end
 function s.rvspcon(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnPlayer()==tp and Duel.GetTurnCount()~=e:GetLabel()
+
 end
 function s.rvspfilter(c,e,tp)
 	return c:IsCode(1000000000) and c:IsCanBeSpecialSummoned(e,0,tp,false,false)
 end
+-- Prompt checks condition here during the Standby Phase
 function s.rvsptg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_MZONE)>0
 		and Duel.IsExistingMatchingCard(s.rvspfilter,tp,LOCATION_GRAVE,0,1,nil,e,tp) end
@@ -148,6 +113,7 @@ function s.rvspop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 
+-- Targets and filters for granted continuous aura effects
 function s.zerotg(e,c)
 	return c:IsFaceup() and c:IsSetCard(0x4003) and c~=e:GetHandler()
 end
@@ -177,66 +143,156 @@ function s.damcon(e)
 	end
 	return false
 end
-function s.apply_granted_effect(c)
-	--This card's original ATK/DEF become 0
-	local e0=Effect.CreateEffect(c)
-	e0:SetType(EFFECT_TYPE_SINGLE)
-	e0:SetCode(EFFECT_SET_BASE_ATTACK)
-	e0:SetValue(0)
-	e0:SetReset(RESET_EVENT+RESETS_STANDARD)
-	c:RegisterEffect(e0,true)
-	local e0b=e0:Clone()
-	e0b:SetCode(EFFECT_SET_BASE_DEFENSE)
-	c:RegisterEffect(e0b,true)
 
-	--Other Emerald Light monsters you control have ATK/DEF set to 0
+-- "Control Only 1" Rule Filter
+function s.splimitcode(e,c)
+	return c:IsCode(1000000000) and c~=e:GetHandler()
+end
+function s.ctfilter(c,tp)
+	return c:IsFaceup() and c:IsCode(1000000000) and c:IsControler(tp)
+end
+function s.ctop(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	local g=Duel.GetMatchingGroup(s.ctfilter,tp,LOCATION_MZONE,0,nil,tp)
+	if #g>1 and g:IsContains(c) then
+		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TOGRAVE)
+		local sg=g:Select(tp,1,1,c)
+		Duel.SendtoGrave(sg,REASON_RULE)
+	end
+end
+
+-- Destruction Effect Targets/Filters (Bypasses the archetype loss from the name-change)
+function s.desfilter(c,e)
+	return (c:IsFaceup() or c:IsLocation(LOCATION_HAND)) 
+		and (c:IsSetCard(0x4003) or (e and c==e:GetHandler())) 
+		and c:IsDestructable()
+end
+function s.destg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.IsExistingMatchingCard(s.desfilter,tp,LOCATION_ONFIELD+LOCATION_HAND,0,1,nil,e)
+		and Duel.IsExistingMatchingCard(nil,tp,0,LOCATION_ONFIELD,1,nil) end
+	local g=Duel.GetMatchingGroup(s.desfilter,tp,LOCATION_ONFIELD+LOCATION_HAND,0,nil,e)
+	local og=Duel.GetMatchingGroup(nil,tp,0,LOCATION_ONFIELD,nil)
+	Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
+	Duel.SetOperationInfo(0,CATEGORY_DESTROY,og,1,0,0)
+end
+function s.desop(e,tp,eg,ep,ev,re,r,rp)
+	local max_my_cards = Duel.GetMatchingGroupCount(s.desfilter,tp,LOCATION_ONFIELD+LOCATION_HAND,0,nil,e)
+	local max_opp_cards = Duel.GetMatchingGroupCount(nil,tp,0,LOCATION_ONFIELD,nil)
+	local max_count = math.min(max_my_cards, max_opp_cards)
+	if max_count==0 then return end
+	
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+	local g=Duel.SelectMatchingCard(tp,s.desfilter,tp,LOCATION_ONFIELD+LOCATION_HAND,0,1,max_count,nil,e)
+	if #g>0 then
+		Duel.HintSelection(g,true)
+		local count = Duel.Destroy(g,REASON_EFFECT)
+		if count>0 then
+			Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+			local og=Duel.SelectMatchingCard(tp,nil,tp,0,LOCATION_ONFIELD,count,count,nil)
+			if #og>0 then
+				Duel.HintSelection(og,true)
+				Duel.Destroy(og,REASON_EFFECT)
+			end
+		end
+	end
+end
+
+function s.apply_granted_effect(c)
+	-- Name becomes "Emerald Sovereign Ritual Dragon"
 	local e1=Effect.CreateEffect(c)
-	e1:SetType(EFFECT_TYPE_FIELD)
-	e1:SetCode(EFFECT_SET_ATTACK_FINAL)
-	e1:SetRange(LOCATION_MZONE)
-	e1:SetTargetRange(LOCATION_MZONE,0)
-	e1:SetTarget(s.zerotg)
-	e1:SetValue(0)
+	e1:SetType(EFFECT_TYPE_SINGLE)
+	e1:SetCode(EFFECT_CHANGE_CODE)
+	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
+	e1:SetValue(1000000000)
 	e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 	c:RegisterEffect(e1,true)
-	local e2=e1:Clone()
-	e2:SetCode(EFFECT_SET_DEFENSE_FINAL)
-	c:RegisterEffect(e2,true)
 
-	--This card gains original ATK/DEF of your other Emerald Light monsters
+	-- Cannot summon another code 1000000000 while this card is out
+	local e2=Effect.CreateEffect(c)
+	e2:SetType(EFFECT_TYPE_FIELD)
+	e2:SetCode(EFFECT_CANNOT_SPECIAL_SUMMON)
+	e2:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e2:SetRange(LOCATION_MZONE)
+	e2:SetTargetRange(1,0)
+	e2:SetTarget(s.splimitcode)
+	e2:SetReset(RESET_EVENT+RESETS_STANDARD)
+	c:RegisterEffect(e2,true)
+	local e2b=e2:Clone()
+	e2b:SetCode(EFFECT_CANNOT_SUMMON)
+	c:RegisterEffect(e2b,true)
+	local e2c=e2:Clone()
+	e2c:SetCode(EFFECT_CANNOT_MSET)
+	c:RegisterEffect(e2c,true)
+
+	-- You can only control 1 "Emerald Sovereign Ritual Dragon" Rule Enforcer
 	local e3=Effect.CreateEffect(c)
-	e3:SetType(EFFECT_TYPE_SINGLE)
-	e3:SetCode(EFFECT_UPDATE_ATTACK)
-	e3:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
+	e3:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
+	e3:SetCode(EVENT_ADJUST)
 	e3:SetRange(LOCATION_MZONE)
-	e3:SetValue(s.atkval)
+	e3:SetOperation(s.ctop)
 	e3:SetReset(RESET_EVENT+RESETS_STANDARD)
 	c:RegisterEffect(e3,true)
-	local e4=e3:Clone()
-	e4:SetCode(EFFECT_UPDATE_DEFENSE)
-	e4:SetValue(s.defval)
-	c:RegisterEffect(e4,true)
 
-	--Other Emerald Light monsters cannot be destroyed by battle
+	-- Other Emerald Light monsters you control have ATK/DEF set to 0
+	local e4=Effect.CreateEffect(c)
+	e4:SetType(EFFECT_TYPE_FIELD)
+	e4:SetCode(EFFECT_SET_ATTACK_FINAL)
+	e4:SetRange(LOCATION_MZONE)
+	e4:SetTargetRange(LOCATION_MZONE,0)
+	e4:SetTarget(s.zerotg)
+	e4:SetValue(0)
+	e4:SetReset(RESET_EVENT+RESETS_STANDARD)
+	c:RegisterEffect(e4,true)
+	local e4b=e4:Clone()
+	e4b:SetCode(EFFECT_SET_DEFENSE_FINAL)
+	c:RegisterEffect(e4b,true)
+
+	-- This card gains original ATK/DEF of your other Emerald Light monsters
 	local e5=Effect.CreateEffect(c)
-	e5:SetType(EFFECT_TYPE_FIELD)
-	e5:SetCode(EFFECT_INDESTRUCTABLE_BATTLE)
+	e5:SetType(EFFECT_TYPE_SINGLE)
+	e5:SetCode(EFFECT_UPDATE_ATTACK)
+	e5:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
 	e5:SetRange(LOCATION_MZONE)
-	e5:SetTargetRange(LOCATION_MZONE,0)
-	e5:SetTarget(s.indtg)
-	e5:SetValue(1)
+	e5:SetValue(s.atkval)
 	e5:SetReset(RESET_EVENT+RESETS_STANDARD)
 	c:RegisterEffect(e5,true)
+	local e5b=e5:Clone()
+	e5b:SetCode(EFFECT_UPDATE_DEFENSE)
+	e5b:SetValue(s.defval)
+	c:RegisterEffect(e5b,true)
 
-	--No battle damage from battles involving your other Emerald Light monsters
+	-- Other Emerald Light monsters cannot be destroyed by battle
 	local e6=Effect.CreateEffect(c)
 	e6:SetType(EFFECT_TYPE_FIELD)
-	e6:SetCode(EFFECT_CHANGE_BATTLE_DAMAGE)
+	e6:SetCode(EFFECT_INDESTRUCTABLE_BATTLE)
 	e6:SetRange(LOCATION_MZONE)
-	e6:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
-	e6:SetTargetRange(1,0)
-	e6:SetCondition(s.damcon)
-	e6:SetValue(0)
+	e6:SetTargetRange(LOCATION_MZONE,0)
+	e6:SetTarget(s.indtg)
+	e6:SetValue(1)
 	e6:SetReset(RESET_EVENT+RESETS_STANDARD)
 	c:RegisterEffect(e6,true)
+
+	-- No battle damage from battles involving your other Emerald Light monsters
+	local e7=Effect.CreateEffect(c)
+	e7:SetType(EFFECT_TYPE_FIELD)
+	e7:SetCode(EFFECT_CHANGE_BATTLE_DAMAGE)
+	e7:SetRange(LOCATION_MZONE)
+	e7:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e7:SetTargetRange(1,0)
+	e7:SetCondition(s.damcon)
+	e7:SetValue(0)
+	e7:SetReset(RESET_EVENT+RESETS_STANDARD)
+	c:RegisterEffect(e7,true)
+
+	-- Once per turn: Destroy "Emerald Light" cards on your field/hand (including itself), then destroy opponent's cards equal to that amount
+	local e8=Effect.CreateEffect(c)
+	e8:SetDescription(aux.Stringid(id,1))
+	e8:SetCategory(CATEGORY_DESTROY)
+	e8:SetType(EFFECT_TYPE_IGNITION)
+	e8:SetRange(LOCATION_MZONE)
+	e8:SetCountLimit(1)
+	e8:SetTarget(s.destg)
+	e8:SetOperation(s.desop)
+	e8:SetReset(RESET_EVENT+RESETS_STANDARD)
+	c:RegisterEffect(e8,true)
 end
