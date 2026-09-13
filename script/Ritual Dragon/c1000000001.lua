@@ -1,4 +1,4 @@
---The Ritual Spell
+--Key To The Emerald Light
 local s,id=GetID()
 function s.initial_effect(c)
 	Ritual.AddProcGreater(c,s.ritual_filter)
@@ -23,7 +23,8 @@ local c=e:GetHandler()
 	Duel.Remove(c,POS_FACEUP,REASON_COST)
 end
 function s.spfilter(c,e,tp)
-	return c:IsType(TYPE_RITUAL) and c:IsType(TYPE_MONSTER) and c:IsCanBeSpecialSummoned(e,0,tp,true,false)
+	return (c:IsCode(1000000000) or (c:IsType(TYPE_RITUAL) and c:IsType(TYPE_MONSTER) and c:IsSetCard(0x4003)))
+		and c:IsCanBeSpecialSummoned(e,0,tp,true,false)
 end
 function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_MZONE)>0
