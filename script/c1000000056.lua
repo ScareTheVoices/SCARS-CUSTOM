@@ -1,4 +1,4 @@
--- Custom Card ID (Replace with your actual card ID)
+--Emerald Light Angelic Veiler
 local s,id=GetID()
 function s.initial_effect(c)
     -- Listed Series & Names
@@ -45,7 +45,7 @@ function s.negtg(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
     if chkc then return chkc:IsControler(1-tp) and chkc:IsLocation(LOCATION_MZONE) and chkc:IsFaceup() end
     if chk==0 then return Duel.IsExistingTarget(Card.IsFaceup,tp,0,LOCATION_MZONE,1,nil) end
     Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_NEGATE)
-    local g=Duel.SelectTarget(tp,Card.IsFaceup,tp,0,LOCATION_MZONE,1,nil)
+    local g=Duel.SelectTarget(tp,Card.IsFaceup,tp,0,LOCATION_MZONE,1,1,nil)
     Duel.SetOperationInfo(0,CATEGORY_DISABLE,g,1,0,0)
 end
 
@@ -72,8 +72,8 @@ function s.negop(e,tp,eg,ep,ev,re,r,rp)
         e2:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
         tc:RegisterEffect(e2)
         
-        -- Check condition for ATK to 0 (Emerald Sovereign Ritual Dragon or Emerald Light monster)
-        if Duel.IsExisting穩定 or Duel.IsExistingMatchingCard(s.cfilter,tp,LOCATION_MZONE,0,1,nil) then
+        -- Check for conditions
+        if Duel.IsExistingMatchingCard(s.cfilter,tp,LOCATION_MZONE,0,1,nil) then
             Duel.AdjustInstantly(tc)
             -- Change ATK to 0
             local e3=Effect.CreateEffect(c)
@@ -97,7 +97,7 @@ function s.thtg(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
     if chkc then return chkc:IsLocation(LOCATION_GRAVE+LOCATION_REMOVED) and chkc:IsControler(tp) and s.thfilter(chkc) end
     if chk==0 then return Duel.IsExistingTarget(s.thfilter,tp,LOCATION_GRAVE+LOCATION_REMOVED,0,1,nil) end
     Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
-    local g=Duel.SelectTarget(tp,s.thfilter,tp,LOCATION_GRAVE+LOCATION_REMOVED,0,1,nil)
+    local g=Duel.SelectTarget(tp,s.thfilter,tp,LOCATION_GRAVE+LOCATION_REMOVED,0,1,1,nil)
     Duel.SetOperationInfo(0,CATEGORY_TOHAND,g,1,0,0)
 end
 
