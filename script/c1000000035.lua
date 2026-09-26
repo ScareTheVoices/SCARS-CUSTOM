@@ -1,8 +1,6 @@
 --Emerald Light Protection
 local s,id=GetID()
 function s.initial_effect(c)
-	--Set as Continuous Trap
-	c:SetUniqueOnField(1,0,id)
 	--Activate (flip face-up)
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
@@ -10,7 +8,6 @@ function s.initial_effect(c)
 	c:RegisterEffect(e1)
 	--Protect one chosen Emerald Sovereign Ritual Dragon or Emerald Light monster
 	local e2=Effect.CreateEffect(c)
-	e2:SetDescription(aux.Stringid(id,0))
 	e2:SetCategory(CATEGORY_DESTROY)
 	e2:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
 	e2:SetCode(EFFECT_DESTROY_REPLACE)
@@ -40,8 +37,7 @@ end
 function s.reptg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return e:GetHandler():IsFaceup() and eg:IsExists(s.repfilter,1,nil,tp)
 		and Duel.IsExistingMatchingCard(s.desfilter,tp,LOCATION_MZONE,0,1,nil,Group.CreateGroup()) end
-	if not Duel.SelectEffectYesNo(tp,e:GetHandler(),aux.Stringid(id,0)) then return false end
-	Duel.Hint(HINT_SELECTMSG,tp,aux.Stringid(id,1))
+	if not Duel.SelectEffectYesNo(tp,e:GetHandler()) then return false end
 	local g=eg:FilterSelect(tp,s.repfilter,1,1,nil,tp)
 	if #g==0 then return false end
 	e:SetLabelObject(g)
