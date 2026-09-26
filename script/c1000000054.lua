@@ -1,4 +1,4 @@
---Accel Sovereign
+--True Sovereign
 --Made by ScareTheVoices
 local s,id=GetID()
 s.listed_series={0x4003} 
@@ -113,12 +113,6 @@ function s.rvspop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 
--- Hand Locking Verification Logic
-function s.actlimit(e,re,tp)
-	local rc=re:GetHandler()
-	return re:IsMonsterEffect() and rc:IsLocation(LOCATION_HAND) and not rc:IsType(TYPE_RITUAL)
-end
-
 -- "Control Only 1" Rule Filter
 function s.splimitcode(e,c)
 	return c:IsCode(1000000000) and c~=e:GetHandler()
@@ -136,68 +130,52 @@ function s.ctop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 
--- On-Summon Mass Banishment & Burn Filters
-function s.excludefilter(c,sc)
-	return c~=sc and c:IsAbleToRemove()
+-- Count face-up Ritual cards on the field and Ritual cards in your GY
+function s.ritfilter(c)
+	return c:IsType(TYPE_RITUAL) and (c:IsLocation(LOCATION_GRAVE) or c:IsFaceup())
 end
-function s.burnfilter(c)
-	return c:IsLocation(LOCATION_REMOVED) and c:IsSetCard(0x4003)
+function s.ritcount(tp)
+	return Duel.GetMatchingGroupCount(s.ritfilter,tp,LOCATION_ONFIELD+LOCATION_GRAVE,LOCATION_ONFIELD,nil)
+end
+function s.rmfilter(c)
+	return c:IsAbleToRemove()
 end
 function s.banishtg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.IsExistingMatchingCard(s.excludefilter,tp,LOCATION_ONFIELD,LOCATION_ONFIELD,1,e:GetHandler(),e:GetHandler()) end
-	local g=Duel.GetMatchingGroup(s.excludefilter,tp,LOCATION_ONFIELD,LOCATION_ONFIELD,e:GetHandler(),e:GetHandler())
-	Duel.SetOperationInfo(0,CATEGORY_REMOVE,g,#g,0,0)
-	Duel.SetOperationInfo(0,CATEGORY_DAMAGE,nil,0,1-tp,0)
+	local ritual_count=s.ritcount(tp)
+	local opponent_count=Duel.GetMatchingGroupCount(s.rmfilter,tp,0,LOCATION_ONFIELD,nil)
+	if chk==0 then return ritual_count>0 and opponent_count>0 end
+	local count=math.min(ritual_count,opponent_count)
+	Duel.SetOperationInfo(0,CATEGORY_REMOVE,nil,count,1-tp,LOCATION_ONFIELD)
 end
 function s.banishop(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	local g=Duel.GetMatchingGroup(s.excludefilter,tp,LOCATION_ONFIELD,LOCATION_ONFIELD,c,c)
-	if #g>0 and Duel.Remove(g,POS_FACEUP,REASON_EFFECT)>0 then
-		local bg=Duel.GetOperatedGroup():Filter(s.burnfilter,nil)
-		if #bg>0 then
-			local dam=bg:GetSum(Card.GetBaseAttack)
-			if dam>0 then
-				Duel.Damage(1-tp,dam,REASON_EFFECT)
-			end
-		end
+	local count=math.min(s.ritcount(tp),Duel.GetMatchingGroupCount(s.rmfilter,tp,0,LOCATION_ONFIELD,nil))
+	if count>0 then
+		local g=Duel.SelectMatchingCard(tp,s.rmfilter,tp,0,LOCATION_ONFIELD,1,count,nil)
+		if #g>0 then Duel.Remove(g,POS_FACEUP,REASON_EFFECT) end
 	end
 end
 
--- Gained Quick Effect Negation Logic
-function s.negcon(e,tp,eg,ep,ev,re,r,rp)
-	return rp==1-tp and re:IsActiveType(TYPE_MONSTER) and not e:GetHandler():IsStatus(STATUS_BATTLE_DESTROYED)
+function s.immval(e,te)
+	return te:GetOwnerPlayer()~=e:GetHandlerPlayer()
 end
-function s.tdfilter(c)
-	return c:IsFaceup() and c:IsMonster() and c:IsAbleToDeck()
+
+function s.desfilter(c)
+	return c:IsDestructable()
 end
-function s.negtg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.IsExistingMatchingCard(s.tdfilter,tp,LOCATION_REMOVED,0,1,nil) end
-	Duel.SetTargetCard(eg)
-	Duel.SetOperationInfo(0,CATEGORY_DISABLE+CATEGORY_TODECK,nil,1,tp,LOCATION_REMOVED)
+function s.destg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.IsExistingTarget(s.desfilter,tp,0,LOCATION_ONFIELD,1,nil) end
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+	local g=Duel.SelectTarget(tp,s.desfilter,tp,0,LOCATION_ONFIELD,1,1,nil)
+	Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
 end
-function s.negop(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	local tc=eg:GetFirst()
-	if tc and tc:IsRelateToEffect(e) and tc:IsFaceup() and not tc:IsDisabled() then
-		Duel.NegateRelatedChain(tc,RESET_TURN_SET)
-		local e1=Effect.CreateEffect(c)
-		e1:SetType(EFFECT_TYPE_SINGLE)
-		e1:SetCode(EFFECT_DISABLE)
-		e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
-		e1:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
-		tc:RegisterEffect(e1)
-		local e2=Effect.CreateEffect(c)
-		e2:SetType(EFFECT_TYPE_SINGLE)
-		e2:SetCode(EFFECT_DISABLE_EFFECT)
-		e2:SetValue(RESET_TURN_SET)
-		e2:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
-		tc:RegisterEffect(e2)
-		
-		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TODECK)
-		local g=Duel.SelectMatchingCard(tp,s.tdfilter,tp,LOCATION_REMOVED,0,1,1,nil)
-		if #g>0 then
-			Duel.HintSelection(g)
-			Duel.SendtoDeck(g,nil,SEQ_DECKSHUFFLE,REASON_EFFECT)
+function s.desop(e,tp,eg,ep,ev,re,r,rp)
+	local tc=Duel.GetFirstTarget()
+	if not tc or not tc:IsRelateToEffect(e) then return end
+	local is_ritual=tc:IsOriginalType(TYPE_MONSTER) and tc:IsOriginalType(TYPE_RITUAL)
+	local atk=tc:GetBaseAttack()
+	if Duel.Destroy(tc,REASON_EFFECT)>0 and is_ritual and tc:IsLocation(LOCATION_GRAVE) then
+		if Duel.Remove(tc,POS_FACEUP,REASON_EFFECT)>0 then
+			Duel.Damage(1-tp,atk,REASON_EFFECT)
 		end
 	end
 end
@@ -239,22 +217,9 @@ function s.apply_granted_effect(c)
 	e3:SetOperation(s.ctop)
 	e3:SetReset(reset_flag)
 	c:RegisterEffect(e3,true)
-
-	-- Lock Hand Triggers: Only Ritual monsters can activate from hand
-	local e4=Effect.CreateEffect(c)
-	e4:SetType(EFFECT_TYPE_FIELD)
-	e4:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
-	e4:SetCode(EFFECT_CANNOT_ACTIVATE)
-	e4:SetRange(LOCATION_MZONE)
-	e4:SetTargetRange(1,1)
-	e4:SetValue(s.actlimit)
-	e4:SetReset(reset_flag)
-	c:RegisterEffect(e4,true)
-
-	-- Gained Effect: On Special Summon, banish all other cards on the field, and inflict damage equal to combined ATK of banished 0x4003 cards
+	-- When this card is Special Summoned, banish opponent's cards based on the Ritual count
 	local e5=Effect.CreateEffect(c)
-	e5:SetDescription(aux.Stringid(id,2))
-	e5:SetCategory(CATEGORY_REMOVE+CATEGORY_DAMAGE)
+	e5:SetCategory(CATEGORY_REMOVE)
 	e5:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F) 
 	e5:SetCode(EVENT_SPSUMMON_SUCCESS)
 	e5:SetReset(reset_flag)
@@ -262,17 +227,25 @@ function s.apply_granted_effect(c)
 	e5:SetOperation(s.banishop)
 	c:RegisterEffect(e5,true)
 
-	-- Gained Once Per Turn Quick Effect: Negate Enemy Monster & Recycle Banish Pile
+	-- Unaffected by opponent's card effects
 	local e6=Effect.CreateEffect(c)
-	e6:SetDescription(aux.Stringid(id,3))
-	e6:SetCategory(CATEGORY_DISABLE+CATEGORY_TODECK)
-	e6:SetType(EFFECT_TYPE_QUICK_O)
-	e6:SetCode(EVENT_CHAINING)
+	e6:SetType(EFFECT_TYPE_SINGLE)
+	e6:SetCode(EFFECT_IMMUNE_EFFECT)
+	e6:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
 	e6:SetRange(LOCATION_MZONE)
-	e6:SetCountLimit(1)
-	e6:SetCondition(s.negcon)
-	e6:SetTarget(s.negtg)
-	e6:SetOperation(s.negop)
+	e6:SetValue(s.immval)
 	e6:SetReset(reset_flag)
 	c:RegisterEffect(e6,true)
+
+	-- Once per turn, target and destroy an opponent's card
+	local e7=Effect.CreateEffect(c)
+	e7:SetCategory(CATEGORY_DESTROY+CATEGORY_REMOVE+CATEGORY_DAMAGE)
+	e7:SetType(EFFECT_TYPE_IGNITION)
+	e7:SetProperty(EFFECT_FLAG_CARD_TARGET)
+	e7:SetRange(LOCATION_MZONE)
+	e7:SetCountLimit(1,id+1)
+	e7:SetTarget(s.destg)
+	e7:SetOperation(s.desop)
+	e7:SetReset(reset_flag)
+	c:RegisterEffect(e7,true)
 end
