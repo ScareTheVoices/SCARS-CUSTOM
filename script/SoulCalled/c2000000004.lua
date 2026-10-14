@@ -38,8 +38,8 @@ end
 s.listed_names={CARD_SOUL_CALL}
 
 -- Filter out legal Soulcalled targets to summon
-function s.spfilter(c,e,tp)
-    return c:IsSetCard(0x1317) and c:IsCanBeSpecialSummoned(e,0,tp,true,false)
+function s.spfilter(c,e,tp,id)
+    return c:IsSetCard(0x1317) and c:IsType(TYPE_MONSTER) and c:GetCode()~=id and c:IsCanBeSpecialSummoned(e,0,tp,true,false)
 end
 
 -- Cost function: Discard Booster first
@@ -49,15 +49,15 @@ function s.spcost(e,tp,eg,ep,ev,re,r,rp,chk)
     Duel.SendtoGrave(c,REASON_COST + REASON_DISCARD)
 end
 
--- Target function: Look for a monster to tribute from Hand or Field
+-- Target function: Verify available tributes exist on field or hand natively
 function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
-    -- Group together available tribute fodder from hand or field
-    local g=Duel.GetReleaseGroup(tp,true):Filter(Card.IsCanBeReleased,nil)
-    local hand=Duel.GetMatchingGroup(Card.IsCanBeReleased,tp,LOCATION_HAND,0,e:GetHandler())
-    g:Merge(hand)
-    
-    if chk==0 then 
-        return #g>0 and Duel.IsExistingMatchingCard(s.spfilter,tp,LOCATION_HAND + LOCATION_DECK + LOCATION_GRAVE,0,1,nil,e,tp) 
+    if chk==0 then
+        -- Count valid releasable monsters in hand
+        local hchk = Duel.IsExistingMatchingCard(Card.IsReleasableByEffect,tp,LOCATION_HAND,0,1,e:GetHandler())
+        -- Count valid releasable monsters on the field
+        local fchk = Duel.GetReleaseGroup(tp):IsExists(Card.IsReleasableByEffect,1,nil)
+        
+        return (hchk or fchk) and Duel.IsExistingMatchingCard(s.spfilter,tp,LOCATION_HAND + LOCATION_DECK + LOCATION_GRAVE,0,1,nil,e,tp,id)
     end
     Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_HAND + LOCATION_DECK + LOCATION_GRAVE)
 end
@@ -65,22 +65,27 @@ end
 -- Operation function: Execute Tribute, Summon, and Stat inheritance
 function s.spop(e,tp,eg,ep,ev,re,r,rp)
     local c=e:GetHandler()
-    local g=Duel.GetReleaseGroup(tp,true):Filter(Card.IsCanBeReleased,nil)
-    local hand=Duel.GetMatchingGroup(Card.IsCanBeReleased,tp,LOCATION_HAND,0,nil)
-    g:Merge(hand)
+    
+    -- Gather valid monsters using official engine filters
+    local hand=Duel.GetMatchingGroup(Card.IsReleasableByEffect,tp,LOCATION_HAND,0,nil)
+    local field=Duel.GetReleaseGroup(tp):Filter(Card.IsReleasableByEffect,nil)
+    
+    -- Combine hand and field choices
+    local g=hand:Clone()
+    g:Merge(field)
     
     if #g==0 then return end
     Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_RELEASE)
     local rg=g:Select(tp,1,1,nil)
     local tc=rg:GetFirst()
     
-    -- Cache original stats before tribute processing
+    -- Cache original stats safely before tribute processing
     local atk=tc:GetBaseAttack()
     local def=tc:GetBaseDefense()
     
     if Duel.Release(tc,REASON_EFFECT)>0 then
         Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
-        local sg=Duel.SelectMatchingCard(tp,s.spfilter,tp,LOCATION_HAND + LOCATION_DECK + LOCATION_GRAVE,0,1,1,nil,e,tp)
+        local sg=Duel.SelectMatchingCard(tp,s.spfilter,tp,LOCATION_HAND + LOCATION_DECK + LOCATION_GRAVE,0,1,1,nil,e,tp,id)
         local sc=sg:GetFirst()
         
         if sc and Duel.SpecialSummon(sc,0,tp,tp,true,false,POS_FACEUP)>0 then
@@ -105,9 +110,12 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
     end
 end
 
--- Soul Call Search Condition (Fails if sent to GY as a cost parameter)
+-- FIXED: Stripped REASON_COST dependencies. Checks directly if this card's own effect handled the movement.
 function s.thcon(e,tp,eg,ep,ev,re,r,rp)
-    return not e:GetHandler():IsReason(REASON_COST)
+    -- If no running effect caused this (battle, generic mill, game mechanics), it passes
+    if not re then return true end
+    -- If an effect caused this, block it ONLY if the effect belongs to this exact copy of Booster
+    return re:GetHandler() ~= e:GetHandler()
 end
 
 function s.thfilter(c)
@@ -116,12 +124,12 @@ end
 
 function s.thtg(e,tp,eg,ep,ev,re,r,rp,chk)
     if chk==0 then return Duel.IsExistingMatchingCard(s.thfilter,tp,LOCATION_DECK + LOCATION_GRAVE,0,1,nil) end
-    Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_DECK + LOCATION_GRAVE)
+    Duel.SetOperationInfo(0,CATEGORY_TOHAND,nil,1,tp,LOCATION_GRAVE + LOCATION_DECK)
 end
 
 function s.thop(e,tp,eg,ep,ev,re,r,rp)
     Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
-    local g=Duel.SelectMatchingCard(tp,s.thfilter,tp,LOCATION_DECK + LOCATION_GRAVE,0,1,1,nil)
+    local g=Duel.SelectMatchingCard(tp,s.thfilter,tp,LOCATION_GRAVE + LOCATION_DECK,0,1,1,nil)
     if #g>0 then
         Duel.SendtoHand(g,nil,REASON_EFFECT)
         Duel.ConfirmCards(1-tp,g)
