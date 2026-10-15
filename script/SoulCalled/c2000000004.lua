@@ -3,8 +3,6 @@ local s, id = GetID()
 local CARD_SOUL_CALL = 2000000001
 
 function s.initial_effect(c)
-    c:SetUniqueOnField(1,0,aux.FilterBoolFunction(Card.IsCode,id),LOCATION_MZONE)
-    
     -- Cannot be Normal Summoned
     local e1=Effect.CreateEffect(c)
     e1:SetType(EFFECT_TYPE_SINGLE)
