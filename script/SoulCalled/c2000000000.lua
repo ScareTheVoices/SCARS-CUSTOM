@@ -4,12 +4,23 @@ local s, id = GetID()
 local TOKEN_DARK_SOUL = 2000000005
 function s.initial_effect(c)
     c:SetUniqueOnField(1,0,aux.FilterBoolFunction(Card.IsCode,2000000000),LOCATION_MZONE)
+    
+    -- This card's original level is always treated as 8
+    local e0=Effect.CreateEffect(c)
+    e0:SetType(EFFECT_TYPE_SINGLE)
+    e0:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
+    e0:SetRange(LOCATION_MZONE + LOCATION_HAND + LOCATION_DECK + LOCATION_GRAVE + LOCATION_REMOVED)
+    e0:SetCode(EFFECT_CHANGE_LEVEL)
+    e0:SetValue(8)
+    c:RegisterEffect(e0)
+
     -- Cannot be Normal Summoned
     local e1=Effect.CreateEffect(c)
     e1:SetType(EFFECT_TYPE_SINGLE)
     e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
     e1:SetCode(EFFECT_CANNOT_SUMMON)
     c:RegisterEffect(e1)
+    
     -- Banish opponent's monster in battle, then place 1 "Dark Soul Token" in the Spell/Trap Zone
     local e2=Effect.CreateEffect(c)
     e2:SetDescription(aux.Stringid(id,0))
@@ -19,6 +30,7 @@ function s.initial_effect(c)
     e2:SetTarget(s.bantg)
     e2:SetOperation(s.banop)
     c:RegisterEffect(e2)
+    
     -- Add card to hand when destroyed or banished
     local e4=Effect.CreateEffect(c)
     e4:SetType(EFFECT_TYPE_SINGLE + EFFECT_TYPE_TRIGGER_O)
