@@ -5,6 +5,15 @@ local CARD_SOUL_CALL = 2000000001
 function s.initial_effect(c)
     c:SetUniqueOnField(1,0,aux.FilterBoolFunction(Card.IsCode,id),LOCATION_MZONE)
     
+    -- This card's original level is always treated as 4
+    local e0=Effect.CreateEffect(c)
+    e0:SetType(EFFECT_TYPE_SINGLE)
+    e0:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
+    e0:SetRange(LOCATION_MZONE + LOCATION_HAND + LOCATION_DECK + LOCATION_GRAVE + LOCATION_REMOVED)
+    e0:SetCode(EFFECT_CHANGE_LEVEL)
+    e0:SetValue(4)
+    c:RegisterEffect(e0)
+
     -- Cannot be Normal Summoned
     local e1=Effect.CreateEffect(c)
     e1:SetType(EFFECT_TYPE_SINGLE)
